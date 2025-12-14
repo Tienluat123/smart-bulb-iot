@@ -19,9 +19,19 @@ Content-Type: application/json
 # và dán vào thay thế chữ [DÁN_TOKEN_VÀO_ĐÂY] ở dưới.
 PUT {{baseUrl}}/profile
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTcyNjYyMSwiZXhwIjoxNzY4MzE4NjIxfQ.anb4ArGy2jacVjmaVm43MUwIivyPNBCNDFvMH52L0fc
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTcyOTE5MCwiZXhwIjoxNzY4MzIxMTkwfQ.8FgeqCdgf1388pye2Dw8T0KIxWUj_VAGcSTlDZJhkNQ
 
 {
-    "email": "luatpro103qn@gmail.com",
+    "email": "ntluat032@gmail.com",
     "fullname": "Nguyễn Tiến Luật (VIP)"
 }
+
+
+
+### ==========================================
+# 3. GỬI BÁO CÁO TUẦN (Report Weekly)
+# ==========================================
+# ⚠️ LƯU Ý: Sau khi chạy bước 1, bạn hãy copy chuỗi "token" 
+# và dán vào thay thế chữ [DÁN_TOKEN_VÀO_ĐÂY] ở dưới.
+POST http://localhost:5001/api/report/weekly
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTczNDczNiwiZXhwIjoxNzY4MzI2NzM2fQ.KEDg_Qj80x3FYGAfwZFqDvYoiediCzn1qfpTZG2CXS8
