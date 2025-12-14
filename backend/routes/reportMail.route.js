@@ -1,0 +1,8 @@
+const express = require('express');
+const router = express.Router();
+const reportController = require('../controllers/reportMail.controller');
+
+// Định nghĩa đường dẫn: GET /api/report/weekly -> gọi controller xử lý
+router.get('/weekly', reportController.getWeeklyReport);
+
+module.exports = router;

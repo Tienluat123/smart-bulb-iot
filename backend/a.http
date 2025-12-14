@@ -1,0 +1,27 @@
+### Biến môi trường
+@baseUrl = http://localhost:5001/api/auth
+
+# ==========================================
+# 1. ĐĂNG NHẬP (Login)
+# ==========================================
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "username": "sv01",
+    "password": "123"
+}
+
+### ==========================================
+# 2. CẬP NHẬT PROFILE (Đổi Email)
+# ==========================================
+# ⚠️ LƯU Ý: Sau khi chạy bước 1, bạn hãy copy chuỗi "token" 
+# và dán vào thay thế chữ [DÁN_TOKEN_VÀO_ĐÂY] ở dưới.
+PUT {{baseUrl}}/profile
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTcyNjYyMSwiZXhwIjoxNzY4MzE4NjIxfQ.anb4ArGy2jacVjmaVm43MUwIivyPNBCNDFvMH52L0fc
+
+{
+    "email": "luatpro103qn@gmail.com",
+    "fullname": "Nguyễn Tiến Luật (VIP)"
+}
