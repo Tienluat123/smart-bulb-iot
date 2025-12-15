@@ -91,7 +91,7 @@ const initSocket = (io) => {
 
                 // Báo lại cho user (và các tab khác của user đó)
                 io.to(deviceId).emit('alarm_updated', { time, active: true });
-                console.log(`💾 Đã đặt báo thức cho ${deviceId} lúc ${time}`);
+                console.log(`Đã đặt báo thức cho ${deviceId} lúc ${time}`);
             } catch (e) { console.error(e); }
         });
 
@@ -102,7 +102,7 @@ const initSocket = (io) => {
 
             if(!deviceId) return;
 
-            console.log(`🍅 Pomodoro xong trên thiết bị: ${deviceId}`);
+            console.log(`Pomodoro xong trên thiết bị: ${deviceId}`);
             
             // Hú còi
             sendCommand(deviceId, { action: "BUZZER", duration: 3000 });

@@ -1,0 +1,28 @@
+/* src/styles/theme.css */
+:root {
+  /* 1. Bảng màu từ ảnh (Hex codes) */
+  --bg-app: #feefe8;           /* Nền chính ấm áp */
+  --bg-card: #fffffe;          /* Nền thẻ trắng sạch */
+  --text-head: #232323;        /* Tiêu đề đậm */
+  --text-body: #222525;        /* Nội dung xám đậm */
+  
+  --color-primary: #078080;    /* Xanh Teal (Highlight/Link) */
+  --color-accent: #f45d48;     /* Cam đất (Button/Action) */
+  --stroke: #232323;           /* Viền nét (nếu cần) */
+
+  /* 2. Cấu hình hình khối */
+  --radius-card: 12px;         /* Bo góc vừa phải, không quá tròn như kẹo */
+  --radius-btn: 8px;           /* Nút bấm vuông vắn hơn chút */
+  
+  /* 3. Hiệu ứng */
+  /* Bóng đổ cứng (Hard shadow) tạo cảm giác Retro/Clean */
+  --shadow-card: 4px 4px 0px rgba(35, 35, 35, 0.1); 
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-body);
+  font-family: 'Inter', 'Segoe UI', sans-serif; /* Font chữ hiện đại, sạch sẽ */
+  margin: 0;
+  padding: 0;
+}

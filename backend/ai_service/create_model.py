@@ -1,22 +1,16 @@
 import pandas as pd
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import pickle
 import os
 
-# ==========================================
-# 1. HÀM SINH DỮ LIỆU GIẢ LẬP (Data Generation)
-# ==========================================
+
 def generate_smart_data(n_samples=5000):
-    np.random.seed(42) # Giữ cố định để kết quả giống nhau
+    np.random.seed(42)
     
-    # 1. Sinh dữ liệu thô (Raw Data)
-    # Nhiệt độ: Trung bình 28, dao động từ 18-38
+    # Sinh dữ liệu giả lập
     temperature = np.random.normal(28, 4, n_samples).clip(16, 40)
-    # Độ ẩm: Trung bình 65%, dao động 30-95%
     humidity = np.random.normal(65, 12, n_samples).clip(20, 98)
-    # Độ sáng (Lux): Giả lập từ 0 - 1000 Lux
-    # (Lưu ý: Code cũ bạn dùng %, mình đổi sang Lux cho chuẩn phần cứng)
     light_lux = np.random.normal(400, 200, n_samples).clip(0, 1200)
     
     df = pd.DataFrame({
@@ -25,71 +19,76 @@ def generate_smart_data(n_samples=5000):
         'lux': np.round(light_lux, 0).astype(int)
     })
     
-    # 2. Logic tính điểm (Scoring Algorithm)
+    # --- Logic 1: Tính điểm (Health Score) ---
     def calculate_health_score(row):
         score = 100
-        
-        # --- Phạt Nhiệt độ (Lý tưởng 24-26 độ) ---
         score -= abs(row['temp'] - 25) * 2.5
-        
-        # --- Phạt Độ ẩm (Lý tưởng 50-70%) ---
         if row['hum'] < 50: score -= (50 - row['hum']) * 0.5
-        elif row['hum'] > 70: score -= (row['hum'] - 70) * 0.8 # Ẩm cao khó chịu hơn khô
-            
-        # --- Phạt Ánh sáng (Quan trọng nhất) ---
-        # Đọc sách cần tối thiểu 300 Lux, tốt nhất 500 Lux
-        if row['lux'] < 300:
-            score -= (300 - row['lux']) * 0.2 # Phạt nặng nếu quá tối
-        elif row['lux'] > 800:
-            score -= (row['lux'] - 800) * 0.05 # Phạt nhẹ nếu chói quá
-            
-        # Thêm chút nhiễu ngẫu nhiên
+        elif row['hum'] > 70: score -= (row['hum'] - 70) * 0.8 
+        if row['lux'] < 300: score -= (300 - row['lux']) * 0.2 
+        elif row['lux'] > 800: score -= (row['lux'] - 800) * 0.05 
         score += np.random.normal(0, 2) 
-        
         return int(min(max(score, 0), 100))
 
     df['health_score'] = df.apply(calculate_health_score, axis=1)
     
-    # 3. Gán nhãn "Sang chảnh" (Labeling)
-    def categorize(score):
-        if score >= 85: 
-            return 'Môi trường Tuyệt vời'
-        elif score >= 65: 
-            return 'Môi trường Ổn định'
-        elif score >= 40: 
-            return 'Cần cải thiện (Hơi tệ)'
-        else: 
-            return 'Cảnh báo: Hại sức khỏe & Mắt'
-        
-    df['label'] = df['health_score'].apply(categorize)
     
+    def determine_label_with_advice(row):
+        t, h, l = row['temp'], row['hum'], row['lux']
+        
+        # 1. Nhóm Nguy Hiểm (Ưu tiên cao nhất)
+        if t > 32: return "Nguy hiểm: Quá Nóng - Hãy bật máy lạnh ngay lập tức!"
+        if t < 18: return "Nguy hiểm: Quá Lạnh - Mặc áo ấm và đóng cửa sổ!"
+        if l < 200: return "Hại mắt: Quá Tối - Bật đèn học lên ngay!"
+        
+        # 2. Nhóm Khó Chịu (Ưu tiên nhì)
+        if h > 85: return "Khó chịu: Quá Ẩm - Mở cửa hoặc bật chế độ hút ẩm."
+        if h < 35: return "Khó chịu: Quá Khô - Uống nước và dùng máy phun sương."
+        if l > 1000: return "Chói mắt: Ánh sáng gắt ✨ - Kéo rèm hoặc giảm đèn."
+        
+        # 3. Nhóm Cần Cải Thiện Nhẹ
+        if t > 29: return "Hơi Nóng - Nên bật quạt nhẹ cho thoáng."
+        if t < 22: return "Hơi Se Lạnh - Khoác thêm áo mỏng."
+        if l < 350: return "Hơi Tối - Tăng độ sáng đèn lên một chút."
+        
+        # 4. Nhóm Tốt
+        if df['health_score'].mean() > 80: # Logic phụ trợ
+             return "Tuyệt vời: Môi trường lý tưởng - Giữ nguyên trạng thái này nhé!"
+        
+        return "Môi trường Ổn định - Có thể học tập tốt."
+        
+    df['label'] = df.apply(determine_label_with_advice, axis=1)
     return df
 
 # ==========================================
-# 2. CHẠY TRAIN MODEL
+# 2. TRAIN VÀ LƯU MODEL
 # ==========================================
 if __name__ == "__main__":
-    print("Đang sinh dữ liệu và train model...")
+    print("⏳ Đang sinh dữ liệu...")
+    df = generate_smart_data(n_samples=3000)
     
-    # 1. Tạo Data
-    df = generate_smart_data(n_samples=2000)
-    print(f"Đã tạo {len(df)} dòng dữ liệu mẫu.")
-    print(df.head()) # In thử 5 dòng đầu xem sao
+    # In thử vài dòng xem nhãn mới trông thế nào
+    print(df[['temp', 'label']].head(5))
 
-    # 2. Chuẩn bị Train
-    X = df[['temp', 'hum', 'lux']] # Input
-    y = df['label']                # Output (Label mới)
+    X = df[['temp', 'hum', 'lux']]
+    y_label = df['label']      
+    y_score = df['health_score'] 
 
-    # 3. Train Model (Decision Tree)
-    clf = DecisionTreeClassifier(max_depth=5) # Giới hạn độ sâu để tránh overfitting
-    clf.fit(X, y)
+    # Train Classifier (Học thuộc các câu lời khuyên trên)
+    print("🤖 Đang train Model...")
+    clf = RandomForestClassifier(n_estimators=100, random_state=42)
+    clf.fit(X, y_label)
+    
+    # Train Regressor (Học chấm điểm)
+    reg = RandomForestRegressor(n_estimators=100, random_state=42)
+    reg.fit(X, y_score)
 
-    # 4. Lưu Model
+    # Lưu file
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(current_dir, 'model_env.pkl')
+    path_clf = os.path.join(current_dir, 'model_classifier.pkl')
+    path_reg = os.path.join(current_dir, 'model_regressor.pkl')
 
-    with open(model_path, 'wb') as f:
-        pickle.dump(clf, f)
+    with open(path_clf, 'wb') as f: pickle.dump(clf, f)
+    with open(path_reg, 'wb') as f: pickle.dump(reg, f)
 
-    print(f"Đã lưu Model AI mới tại: {model_path}")
-    print("Bây giờ API báo cáo tuần sẽ trả về các đánh giá xịn xò hơn!")
+    print(f"\n✅ Xong! AI giờ biết tự đưa ra lời khuyên cụ thể rồi nha.")
