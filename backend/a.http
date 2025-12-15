@@ -15,7 +15,7 @@ Content-Type: application/json
 ### ==========================================
 # 2. CẬP NHẬT PROFILE (Đổi Email)
 # ==========================================
-# ⚠️ LƯU Ý: Sau khi chạy bước 1, bạn hãy copy chuỗi "token" 
+#  LƯU Ý: Sau khi chạy bước 1, bạn hãy copy chuỗi "token" 
 # và dán vào thay thế chữ [DÁN_TOKEN_VÀO_ĐÂY] ở dưới.
 PUT {{baseUrl}}/profile
 Content-Type: application/json

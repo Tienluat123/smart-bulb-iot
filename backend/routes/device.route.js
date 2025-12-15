@@ -7,6 +7,6 @@ const { protect } = require('../middlewares/auth.middleware');
 router.post('/power', protect, deviceController.controlPower);
 router.get('/history', protect, deviceController.getSensorHistory); 
 router.get('/status', protect, deviceController.getDeviceStatus);
-
+router.post('/alarm', protect, deviceController.setAlarm);
 
 module.exports = router;
