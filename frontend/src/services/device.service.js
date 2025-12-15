@@ -1,6 +1,20 @@
 // src/services/deviceService.js
 import api from './api.service';
 
+
+export const toggleDevicePower = async (state) => { // Bỏ tham số deviceId
+    try {
+        // Gọi API mới, chỉ cần gửi state
+        const response = await api.post('/device/power', {
+            state: state // 'ON' hoặc 'OFF'
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Lỗi bật tắt đèn:", error);
+        throw error;
+    }
+};
+
 // Không cần truyền deviceId vào hàm nữa
 export const getDeviceStatus = async () => {
     try {
