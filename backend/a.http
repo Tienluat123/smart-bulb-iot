@@ -65,7 +65,7 @@ Content-Type: application/json
 ### =============================================
 POST http://localhost:5001/api/device/manual-power
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc4MDI3MCwiZXhwIjoxNzY4MzcyMjcwfQ.YdqMnryPHrtDkzUl5qCBHL2oUsyNLdD2KUlQCR3Qg1A
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc5MTg1MiwiZXhwIjoxNzY4MzgzODUyfQ.hbBuaWh4Mu2Ux7Hv_MThsurTVsUQbfzLpV_eeU3q-O0
 
 {
     "deviceId": "{{deviceId}}",
@@ -78,7 +78,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM
 ### =============================================
 POST {{baseUrl}}/manual-power
 Content-Type: application/json
-Authorization: Bearer
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc5MTYzMywiZXhwIjoxNzY4MzgzNjMzfQ.haOgHA3gzLkXKh1rPn9-DQ1WhLfQNxDwtklL2FtYAKo
 
 {
     "deviceId": "{{deviceId}}",
@@ -96,3 +96,9 @@ Authorization: Bearer
 {
     "deviceId": "{{deviceId}}"
 }
+
+### =============================================
+
+GET http://localhost:5001/api/device/history
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc4ODU5MywiZXhwIjoxNzY4MzgwNTkzfQ.2ch1rWHvRdBB08PLFMSk2lATpyftN6E2RJWL9l-VqUM

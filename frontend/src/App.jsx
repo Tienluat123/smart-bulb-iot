@@ -1,8 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login/Login';
+import Dashboard from './pages/Dashboard/Dashboard';
 
-// Tạo tạm component Dashboard rỗng để test chuyển trang
-const DashboardPlaceholder = () => <h1 style={{textAlign:'center', marginTop: '50px'}}>🏡 Đây là Dashboard (Đang xây dựng)</h1>;
 
 function App() {
   return (
@@ -12,7 +11,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<DashboardPlaceholder />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   );

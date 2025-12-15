@@ -1,7 +1,7 @@
 // src/pages/Login/Login.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api from '../../services/api.service';
 import './Login.css';
 
 const Login = () => {
