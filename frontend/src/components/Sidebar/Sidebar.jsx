@@ -23,12 +23,13 @@ const Sidebar = () => {
                 <NavLink to="/smart-features" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                     <FiSliders className="icon" /> Tiện ích thông minh
                 </NavLink>
-                <NavLink to="/stats" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                    <FiBarChart2 className="icon" /> Thống kê
-                </NavLink>
-                <NavLink to="/assistant" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                <NavLink to="/ai-assistant" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                     <FiCpu className="icon" /> Trợ lý AI
                 </NavLink>
+                <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                    <FiBarChart2 className="icon" /> Hồ sơ của tôi
+                </NavLink>
+                
             </nav>
 
             <div className="logout-area">

@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs'); // <--- Cần cái này
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET || "bi_mat", { expiresIn: '30d' });
@@ -31,23 +32,36 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-// 2. Cập nhật Profile (Thoải mái đổi Email nhận tin)
 exports.updateProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
+        console.log("Yêu cầu cập nhật từ user:", req.user.id, req.body);
 
         if (user) {
-            // Người dùng được phép đổi Email (để nhận báo cáo)
+            // 1. Cập nhật thông tin cơ bản
             user.email = req.body.email || user.email;
-            
-            // Cập nhật các cái khác
             user.fullname = req.body.fullname || user.fullname;
-            user.phone    = req.body.phone || user.phone;
-            
-            if (req.body.password) {
-                user.password = req.body.password;
+            user.phone = req.body.phone || user.phone;
+
+            // 2. Xử lý Đổi mật khẩu (Logic chặt chẽ hơn)
+            if (req.body.newPassword && req.body.newPassword.trim() !== "") {
+                
+                // A. Bắt buộc phải có mật khẩu hiện tại
+                if (!req.body.currentPassword) {
+                    return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu." });
+                }
+
+                // B. So sánh mật khẩu cũ bằng bcrypt (thay vì ===)
+                const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+                if (!isMatch) {
+                    return res.status(400).json({ message: "Mật khẩu hiện tại không đúng!" }); // Báo lỗi ngay
+                }
+               
+               // Giả sử Model bạn đã làm hook pre-save như bài trước:
+               user.password = req.body.newPassword; 
             }
 
+            // 3. Lưu vào DB
             const updatedUser = await user.save();
 
             res.json({
@@ -57,12 +71,37 @@ exports.updateProfile = async (req, res) => {
                 email: updatedUser.email,    
                 device_id: updatedUser.device_id,
                 token: generateToken(updatedUser._id),
-                message: "Cập nhật thành công! (Email nhận báo cáo đã thay đổi)"
+                message: "Cập nhật thành công!"
             });
         } else {
             res.status(404).json({ message: "User không tồn tại" });
         }
     } catch (error) {
+        // Xử lý lỗi trùng email (nếu email là unique)
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Email này đã được sử dụng." });
+        }
         res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getCurrentUser = async (req, res) => {
+    try {
+        // req.user.id có được nhờ middleware verifyToken đã giải mã token
+        const userId = req.user.id;
+
+        // Tìm user theo ID, trừ trường password ra
+        const user = await User.findById(userId).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+        }
+
+        // Trả về object user (chứa username, fullname, email, phone...)
+        res.json(user);
+
+    } catch (error) {
+        console.error("Lỗi lấy thông tin user:", error);
+        res.status(500).json({ message: 'Lỗi Server.' });
     }
 };
