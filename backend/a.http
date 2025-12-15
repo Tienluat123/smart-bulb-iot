@@ -65,7 +65,7 @@ Content-Type: application/json
 ### =============================================
 POST http://localhost:5001/api/device/manual-power
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc5MTg1MiwiZXhwIjoxNzY4MzgzODUyfQ.hbBuaWh4Mu2Ux7Hv_MThsurTVsUQbfzLpV_eeU3q-O0
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc5MjI5NSwiZXhwIjoxNzY4Mzg0Mjk1fQ.16BUuyOPqCLmrMPtsP7snkoTAvpF1DydVQi8neOhAvc
 
 {
     "deviceId": "{{deviceId}}",
@@ -76,9 +76,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM
 ### 3. TEST BẬT ĐÈN THỦ CÔNG (MANUAL ON)
 ### Mong đợi: Đèn BẬT + Auto Mode bị KHÓA (false)
 ### =============================================
-POST {{baseUrl}}/manual-power
+POST http://localhost:5001/api/device/enable-auto
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc5MTYzMywiZXhwIjoxNzY4MzgzNjMzfQ.haOgHA3gzLkXKh1rPn9-DQ1WhLfQNxDwtklL2FtYAKo
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc5MjI5NSwiZXhwIjoxNzY4Mzg0Mjk1fQ.16BUuyOPqCLmrMPtsP7snkoTAvpF1DydVQi8neOhAvc
 
 {
     "deviceId": "{{deviceId}}",

@@ -81,6 +81,7 @@ const sendCommand = (deviceId, commandObj) => {
     if (mqttClient) {
         // Tạo topic động: smartbulb/control/ESP32_002
         const controlTopic = `smartbulb/control/${deviceId}`;
+        console.log(`[MQTT OUT] Gửi lệnh đến ${deviceId} tại topic ${controlTopic}:`, commandObj);
         mqttClient.publish(controlTopic, JSON.stringify(commandObj));
     }
 };

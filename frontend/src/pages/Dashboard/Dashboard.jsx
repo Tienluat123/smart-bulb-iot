@@ -50,7 +50,7 @@ const Dashboard = () => {
                 // Ưu tiên lấy từ Log mới nhất, nếu không có thì lấy từ status (nếu backend có trả về)
                 temp: latestLog.temp ?? '--',
                 hum: latestLog.hum ?? '--',
-                power_usage: statusRes.pomodoro_stats?.total_minutes || 0 // Ví dụ lấy KPI làm điện năng giả định
+                power_usage: latestLog.amp ?? '--' // Ví dụ lấy KPI làm điện năng giả định
             });
 
             // --- XỬ LÝ BIỂU ĐỒ (REAL CHART) ---
