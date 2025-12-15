@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 
-export const usePomodoro = (initialMinutes = 25) => {
+export const usePomodoro = (initialMinutes = 25, socketInstance) => { 
+// ^^^ CHÚ Ý: Đã thêm tham số socketInstance
     const [pomoTime, setPomoTime] = useState(initialMinutes * 60);
     const [pomoActive, setPomoActive] = useState(false);
     const intervalRef = useRef(null);
+
 
     // Format giây sang MM:SS
     const formatTime = (seconds) => {
@@ -27,7 +29,29 @@ export const usePomodoro = (initialMinutes = 25) => {
                         clearInterval(intervalRef.current);
                         setPomoActive(false);
                         alert("🎉 Hoàn thành phiên Pomodoro!");
-                        // Có thể gọi socket emit ở đây nếu muốn lưu KPI
+                        
+                        // ===============================================
+                        // 🔥🔥🔥 EMIT SOCKET Ở ĐÂY 🔥🔥🔥
+                        // ===============================================
+                        const storedUser = localStorage.getItem('userInfo');
+                        let deviceId = null;
+                        if (storedUser) {
+                            deviceId = JSON.parse(storedUser).deviceId;
+                        }
+
+                        console.log(`[SOCKET EMIT] Chuẩn bị báo kết thúc Pomodoro cho thiết bị: ${deviceId}`);
+
+                        if (socketInstance && deviceId) {
+                             socketInstance.emit('pomodoro_finished', { 
+                                 deviceId: deviceId, 
+                                 duration: initialMinutes // Gửi 25 phút
+                             });
+                             console.log(`[SOCKET EMIT] Đã báo kết thúc Pomodoro cho thiết bị: ${deviceId}`);
+                        } else {
+                             console.error("Lỗi: Không tìm thấy Socket hoặc DeviceID để emit Pomodoro.");
+                        }
+                        // ===============================================
+                        
                         return initialMinutes * 60; // Reset
                     }
                     return prev - 1;

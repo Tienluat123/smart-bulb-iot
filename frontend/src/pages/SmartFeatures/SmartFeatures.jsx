@@ -6,8 +6,8 @@ import './SmartFeatures.css'; // Nhớ tạo file CSS này nha
 
 const SmartFeatures = () => {
     // Gọi các Hooks chức năng
-    const { alarm, saveAlarm } = useSocketAlarm();
-    const { pomoTime, pomoActive, formatTime, togglePomodoro, resetPomodoro } = usePomodoro(25);
+    const { alarm, saveAlarm, socketInstance } = useSocketAlarm();
+    const { pomoTime, pomoActive, formatTime, togglePomodoro, resetPomodoro } = usePomodoro(25, socketInstance);
     
     const [userName, setUserName] = useState('Admin');
 
@@ -36,7 +36,7 @@ const SmartFeatures = () => {
                     {/* --- WIDGET 1: BÁO THỨC --- */}
                     <div className="feature-card">
                         <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0, color: '#333' }}>⏰ Báo thức</h3>
+                            <h3 style={{ margin: 0, color: '#333' }}>Báo thức</h3>
                             {/* Toggle Switch */}
                             <label className="switch">
                                 <input 
@@ -69,14 +69,14 @@ const SmartFeatures = () => {
                                 }}
                             />
                             <p style={{ marginTop: '20px', color: '#666', fontSize: '16px' }}>
-                                {alarm.is_active ? `🔔 Đã bật lúc ${alarm.time}` : '🔕 Báo thức đang tắt'}
+                                {alarm.is_active ? `Đã bật lúc ${alarm.time}` : 'Báo thức đang tắt'}
                             </p>
                         </div>
                     </div>
 
                     {/* --- WIDGET 2: POMODORO --- */}
                     <div className="feature-card">
-                        <h3 style={{ margin: 0, marginBottom: '25px', color: '#333' }}>🍅 Pomodoro Focus</h3>
+                        <h3 style={{ margin: 0, marginBottom: '25px', color: '#333' }}>Pomodoro Focus</h3>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             {/* Vòng tròn đếm ngược */}
@@ -109,7 +109,7 @@ const SmartFeatures = () => {
                                         boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                                     }}
                                 >
-                                    {pomoActive ? '⏸ Tạm dừng' : '▶️ Bắt đầu'}
+                                    {pomoActive ? '⏸ Tạm dừng' : 'Bắt đầu'}
                                 </button>
                                 
                                 <button 

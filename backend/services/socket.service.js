@@ -32,10 +32,9 @@ const initSocket = (io) => {
 
         for (const [deviceId, alarmTime] of activeAlarms.entries()) {
             if (currentString === alarmTime) {
-                console.log(`⏰ RENG RENG! Thiết bị ${deviceId} đến giờ: ${currentString}`);
+                console.log(`RENG RENG! Thiết bị ${deviceId} đến giờ: ${currentString}`);
 
                 // A. Hú còi (Gửi MQTT xuống đúng thiết bị đó)
-                // Lệnh này gửi action: "BUZZER" để ESP32 xử lý
                 sendCommand(deviceId, { action: "BUZZER", duration: 10000 });
 
                 // B. Báo cho Web (Chỉ gửi vào phòng của thiết bị đó)
@@ -65,7 +64,7 @@ const initSocket = (io) => {
             socket.emit('alarm_updated', { time, active: isActive });
         });
 
-        // Đặt báo thức qua Socket (Chủ yếu để Socket Service có thể tự gọi)
+        // Đặt báo thức qua Socket (Ưu tiên dùng API REST, nhưng vẫn giữ lại)
         socket.on('set_alarm', async (data) => {
             const { deviceId, time, is_active } = data;
             if(!deviceId || !time) return;
@@ -76,34 +75,40 @@ const initSocket = (io) => {
                     { "alarm_config.time": time, "alarm_config.is_active": is_active || true },
                     { upsert: true }
                 );
-                // Dùng hàm cập nhật chung để đồng bộ RAM và Socket
                 updateAlarmInRAM(deviceId, time, is_active || true); 
                 console.log(`Đã đặt báo thức (qua Socket) cho ${deviceId} lúc ${time}`);
             } catch (e) { console.error(e); }
         });
 
-        // Pomodoro xong
+        // ============================================
+        // LOGIC POMODORO ĐÃ HOÀN THIỆN
+        // ============================================
         socket.on('pomodoro_finished', async (data) => {
+            // data = { deviceId: "ESP32_001", duration: 25 }
             const { deviceId, duration } = data;
 
             if(!deviceId) return;
 
-            console.log(`Pomodoro xong trên thiết bị: ${deviceId}`);
+            console.log(`Pomodoro xong trên thiết bị: ${deviceId}. Cộng ${duration || 25} phút vào KPI.`);
             
-            // Hú còi khi Pomodoro xong (Sử dụng lệnh chung)
-            sendCommand(deviceId, { action: "BUZZER", duration: 3000 }); // <-- Đảm bảo lệnh này được gửi
+            // Hú còi báo hiệu kết thúc Pomodoro
+            sendCommand(deviceId, { action: "BUZZER", duration: 3000 }); 
 
-            // Cộng KPI vào DB
+            // Cộng KPI vào DB bằng toán tử $inc
             await Device.findOneAndUpdate(
                 { device_id: deviceId },
-                { $inc: { "pomodoro_stats.total_sessions": 1, "pomodoro_stats.total_minutes": duration || 25 } }
+                { $inc: { 
+                    "pomodoro_stats.total_sessions": 1, 
+                    "pomodoro_stats.total_minutes": duration || 25 
+                } },
+                { new: true } // Lấy bản ghi mới để debug nếu cần
             );
         });
+        // ============================================
         
         // Điều khiển đèn thủ công
         socket.on('control_light', (data) => {
             if(data.deviceId) {
-                // Lệnh gửi MQTT: data đã chứa { mode: 'MANUAL', brightness: 100 } hoặc { power: 'ON' }
                 sendCommand(data.deviceId, data); 
             }
         });
@@ -114,8 +119,10 @@ const initSocket = (io) => {
 const updateAlarmInRAM = (deviceId, time, isActive) => {
     if (isActive && time) {
         activeAlarms.set(deviceId, time);
+        console.log(`RAM Updated: Đặt báo thức ${deviceId} lúc ${time}`);
     } else {
         activeAlarms.delete(deviceId);
+        console.log(`RAM Updated: Hủy báo thức ${deviceId}`);
     }
 
     // Báo cho tất cả Client đang xem thiết bị này biết
