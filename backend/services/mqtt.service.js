@@ -20,7 +20,7 @@ const getModeForStatistics = (currentHour) => {
 
 const connectMQTT = (io) => {
     mqttClient = mqtt.connect(MQTT_BROKER);
-
+    
     mqttClient.on('connect', () => {
         console.log('MQTT Connected (Multi-Device Mode)');
         mqttClient.subscribe(TOPIC_SENSOR_PATTERN);
@@ -28,6 +28,7 @@ const connectMQTT = (io) => {
 
     mqttClient.on('message', async (topic, message) => {
         const topicParts = topic.split('/');
+        console.log('Received MQTT message:', topicParts);
         const deviceId = topicParts[2];
 
         if (topicParts[1] === 'sensor' && deviceId) {

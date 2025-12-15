@@ -10,22 +10,37 @@ const Login = () => {
     const navigate = useNavigate();
 
     const handleLogin = async () => {
-        try {
-            const response = await api.post('/auth/login', {
-                username,
-                password
-            });
+    try {
+        const response = await api.post('/auth/login', {
+            username,
+            password
+        });
 
-            const data = response.data;
-            if (data.token) {
-                localStorage.setItem('authToken', data.token);
-                localStorage.setItem('currentDeviceId', data.deviceId || 'ESP32_001');
-                // Chuyển hướng nhanh, không cần alert phiền phức
-                navigate('/dashboard');
-            }
-        } catch (error) {
+        const data = response.data; // Dữ liệu backend trả về
+
+        if (data.token) {
+            // 1. Lưu Token (Quan trọng nhất để gọi API)
+            localStorage.setItem('authToken', data.token);
+
+            // 2. Lưu thông tin User (Gom lại thành chuỗi JSON)
+            // Chúng ta lưu hết để sau này trang nào cần gì thì lôi ra dùng
+            const userInfo = {
+                id: data._id,
+                username: data.username,
+                fullname: data.fullname, // Ưu tiên hiển thị cái này
+                email: data.email,
+                deviceId: data.device_id
+            };
+            
+            // LocalStorage chỉ lưu được chữ (string), nên phải dùng JSON.stringify
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+
+            // 3. Chuyển hướng vào Dashboard
+            navigate('/dashboard');
+        }
+    } catch (error) {
             console.error(error);
-            alert("Thông tin đăng nhập chưa đúng nè!");
+            alert("Đăng nhập thất bại. Kiểm tra lại thông tin nhé!");
         }
     };
 
