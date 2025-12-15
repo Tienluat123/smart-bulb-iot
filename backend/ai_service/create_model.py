@@ -4,9 +4,7 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import pickle
 import os
 
-# ==========================================
-# 1. SINH DỮ LIỆU & GÁN NHÃN KÈM LỜI KHUYÊN
-# ==========================================
+
 def generate_smart_data(n_samples=5000):
     np.random.seed(42)
     
@@ -34,7 +32,7 @@ def generate_smart_data(n_samples=5000):
 
     df['health_score'] = df.apply(calculate_health_score, axis=1)
     
-    # --- Logic 2: Gán NHÃN + LỜI KHUYÊN (Gộp làm một) ---
+    
     def determine_label_with_advice(row):
         t, h, l = row['temp'], row['hum'], row['lux']
         
@@ -73,7 +71,7 @@ if __name__ == "__main__":
     print(df[['temp', 'label']].head(5))
 
     X = df[['temp', 'hum', 'lux']]
-    y_label = df['label']        
+    y_label = df['label']      
     y_score = df['health_score'] 
 
     # Train Classifier (Học thuộc các câu lời khuyên trên)

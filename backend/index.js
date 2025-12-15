@@ -8,8 +8,10 @@ const connectDB = require('./config/db'); // Đảm bảo file này export hàm 
 // Import Services
 const { connectMQTT } = require('./services/mqtt.service');
 const { initSocket } = require('./services/socket.service');
-const reportRoutes = require('./routes/reportMail.route');
-const authRoutes = require('./routes/auth.route');
+const reportRoute = require('./routes/reportMail.route');
+const authRoute = require('./routes/auth.route');
+const chatRoute = require('./routes/chat.route');
+const deviceRoute = require('./routes/device.route')
 
 // Init App
 const app = express();
@@ -18,8 +20,11 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/report', reportRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api/report', reportRoute);
+app.use('/api/auth', authRoute);
+app.use('/api/chat', chatRoute);
+app.use('/api/device', deviceRoute);
+
 
 
 const PORT = 5001;

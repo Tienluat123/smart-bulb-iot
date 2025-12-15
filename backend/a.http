@@ -35,3 +35,64 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM
 # và dán vào thay thế chữ [DÁN_TOKEN_VÀO_ĐÂY] ở dưới.
 POST http://localhost:5001/api/report/weekly
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTczNDczNiwiZXhwIjoxNzY4MzI2NzM2fQ.KEDg_Qj80x3FYGAfwZFqDvYoiediCzn1qfpTZG2CXS8
+
+
+
+### Chat với SmartBot
+POST http://localhost:5001/api/chat
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc2MTc2NCwiZXhwIjoxNzY4MzUzNzY0fQ.wUVwyp0f47CJbl04ZFJDyGc-HgCxPLImZ7B6kasYI44
+
+{
+    "message": "Phòng tôi hiện tại có thích hợp để đọc sách không?"
+}
+
+
+
+### Cấu hình biến môi trường (Sửa port nếu cần)
+@baseUrl1 = http://localhost:3000/api/device
+@deviceId = ESP32_001
+
+### =============================================
+### 1. KIỂM TRA TRẠNG THÁI THIẾT BỊ
+### =============================================
+GET http://localhost:5001/api/report/weekly
+Content-Type: application/json
+
+### =============================================
+### 2. TEST TẮT ĐÈN THỦ CÔNG (MANUAL OFF)
+### Mong đợi: Đèn TẮT + Auto Mode bị KHÓA (false)
+### =============================================
+POST http://localhost:5001/api/device/manual-power
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTc4MDI3MCwiZXhwIjoxNzY4MzcyMjcwfQ.YdqMnryPHrtDkzUl5qCBHL2oUsyNLdD2KUlQCR3Qg1A
+
+{
+    "deviceId": "{{deviceId}}",
+    "newPowerState": "OFF"
+}
+
+### =============================================
+### 3. TEST BẬT ĐÈN THỦ CÔNG (MANUAL ON)
+### Mong đợi: Đèn BẬT + Auto Mode bị KHÓA (false)
+### =============================================
+POST {{baseUrl}}/manual-power
+Content-Type: application/json
+Authorization: Bearer
+
+{
+    "deviceId": "{{deviceId}}",
+    "newPowerState": "ON"
+}
+
+### =============================================
+### 4. TEST BẬT LẠI CHẾ ĐỘ TỰ ĐỘNG (ENABLE AUTO)
+### Mong đợi: Auto Mode được MỞ (true)
+### =============================================
+POST {{baseUrl}}/enable-auto
+Content-Type: application/json
+Authorization: Bearer
+
+{
+    "deviceId": "{{deviceId}}"
+}

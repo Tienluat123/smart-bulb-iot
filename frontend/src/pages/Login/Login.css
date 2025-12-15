@@ -1,0 +1,89 @@
+/* src/pages/Login/Login.css */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-app); /* Dùng màu nền kem hồng */
+    padding: 20px;
+}
+
+.login-card {
+    background: var(--bg-card);
+    padding: 48px;
+    border-radius: var(--radius-card);
+    /* Viền mỏng + Bóng đổ nhẹ tạo độ nổi tinh tế */
+    border: 1px solid rgba(0,0,0,0.05); 
+    box-shadow: var(--shadow-card);
+    
+    width: 100%;
+    max-width: 380px;
+    text-align: left; /* Canh trái cho hiện đại */
+}
+
+/* Tiêu đề to, rõ ràng */
+.login-title {
+    color: var(--text-head);
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.login-subtitle {
+    color: var(--text-body);
+    font-size: 15px;
+    margin-bottom: 32px;
+    opacity: 0.8;
+}
+
+/* Label cho input */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-label {
+    display: block;
+    color: var(--text-head);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.happy-input {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius-btn);
+    border: 2px solid #e0e0e0; /* Viền xám nhạt mặc định */
+    background-color: var(--bg-card);
+    font-size: 16px;
+    color: var(--text-head);
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+/* Khi bấm vào thì hiện màu Teal */
+.happy-input:focus {
+    border-color: var(--color-primary);
+    background-color: #fff;
+}
+
+.happy-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: var(--radius-btn);
+    border: none;
+    /* Dùng màu Cam đất làm màu chính */
+    background-color: var(--color-accent); 
+    color: #232323; /* Chữ màu tối theo bảng màu (Form button text) */
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: opacity 0.2s;
+}
+
+.happy-btn:hover {
+    opacity: 0.9; /* Hiệu ứng hover đơn giản */
+}
