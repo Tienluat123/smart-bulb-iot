@@ -3,68 +3,54 @@ const User = require('../models/user.model');
 const SensorLog = require('../models/sensorlog.model');
 const { sendCommand } = require('../services/mqtt.service'); // Import hàm gửi lệnh MQTT
 
-
-// Điều khiển BẬT/TẮT thủ công
-exports.manualPowerControl = async (req, res) => {
-    const { deviceId, newPowerState } = req.body; 
-    
-    if (!['ON', 'OFF'].includes(newPowerState)) {
-        return res.status(400).json({ message: "Chỉ gửi 'ON' hoặc 'OFF'." });
-    }
-
-    try {   
-        // 1. Cập nhật DB: CHỈ cập nhật Power, không đụng đến Mode
-        const updatedDevice = await Device.findOneAndUpdate(
-            { device_id: deviceId },
-            { 'current_state.power': newPowerState },
-            { new: true }
-        );
-        
-        if (!updatedDevice) {
-            return res.status(404).json({ message: "Không tìm thấy thiết bị." });
-        }
-
-        // 2. Gửi lệnh MQTT: CHỈ GỬI { "power": "ON" } hoặc { "power": "OFF" }
-        sendCommand(deviceId, { power: newPowerState });
-        
-        res.status(200).json({ 
-            message: `Đã gửi lệnh ${newPowerState}`,
-            state: updatedDevice.current_state
-        });
-
-    } catch (error) {
-        console.error("Lỗi Manual Control:", error);
-        res.status(500).json({ message: "Lỗi Server." });
-    }
-};
-
-exports.enableAutoControl = async (req, res) => {
-    const { deviceId } = req.body;
-
+/**
+ * @description Điều khiển Bật/Tắt thiết bị (Tự động lấy DeviceID từ Token)
+ * @route POST /api/device/control/power
+ * @body { "state": "ON" } hoặc { "state": "OFF" }
+ */
+exports.controlPower = async (req, res) => {
     try {
-        // 1. Cập nhật DB: Đảm bảo Power là ON
+        // 1. Validate đầu vào (Chỉ chấp nhận ON hoặc OFF)
+        const { state } = req.body; 
+        if (!['ON', 'OFF'].includes(state)) {
+            return res.status(400).json({ message: "Trạng thái không hợp lệ. Chỉ gửi 'ON' hoặc 'OFF'." });
+        }
+
+        // 2. Lấy Device ID từ User Token (BẢO MẬT)
+        const userId = req.user.id; // Lấy từ middleware verifyToken
+        const user = await User.findById(userId);
+
+        if (!user || !user.device_id) {
+            return res.status(404).json({ 
+                message: "Tài khoản của bạn chưa liên kết với thiết bị nào." 
+            });
+        }
+        
+        const targetDeviceId = user.device_id;
+
+        // 3. Cập nhật Database
         const updatedDevice = await Device.findOneAndUpdate(
-            { device_id: deviceId },
-            { 'current_state.power': 'ON' },
+            { device_id: targetDeviceId },
+            { 'current_state.power': state },
             { new: true }
         );
 
         if (!updatedDevice) {
-            return res.status(404).json({ message: "Không tìm thấy thiết bị." });
+            return res.status(404).json({ message: "Không tìm thấy thiết bị trong hệ thống." });
         }
-        
-        // 2. Gửi lệnh MQTT: CHỈ GỬI { "power": "ON" }
-        // Nếu đèn đang tắt thì nó sẽ bật lên. Nếu đang bật thì giữ nguyên.
-        sendCommand(deviceId, { power: 'ON' });
-        
+
+        // 4. Gửi lệnh MQTT (Chỉ gửi Power)
+        sendCommand(targetDeviceId, { power: state });
+
+        // 5. Trả về kết quả
         res.status(200).json({ 
-            message: "Đã gửi lệnh ON (Kích hoạt Auto).",
+            message: `Đã gửi lệnh ${state} thành công.`,
             state: updatedDevice.current_state
         });
 
     } catch (error) {
-        console.error("Lỗi Enable Auto:", error);
-        res.status(500).json({ message: "Lỗi Server." });
+        console.error("Lỗi điều khiển nguồn:", error);
+        res.status(500).json({ message: "Lỗi Server khi điều khiển thiết bị." });
     }
 };
 
@@ -136,13 +122,13 @@ exports.getSensorHistory = async (req, res) => {
         const limit = 10;
         // LƯU Ý: Nếu DB bạn dùng timestamp thì sort theo timestamp sẽ nhanh hơn
         const logs = await SensorLog.find({ device_id: targetDeviceId })
-            .sort({ timestamp: -1, _id: -1 }) // Sort theo timestamp hoặc _id đều được (giảm dần)
+            .sort({ timestamp: -1}) // Sort theo timestamp hoặc _id đều được (giảm dần)
             .limit(limit);
+        
 
-        const reversedLogs = logs.reverse();
 
         // 4. Format dữ liệu (Đã sửa time)
-        const formattedData = reversedLogs.map(log => {
+        const formattedData = logs.map(log => {
             // Lấy thời gian từ nhiều nguồn để đảm bảo không bị NaN
             const timeRaw = log.timestamp || log.createdAt || log._id.getTimestamp();
             const date = new Date(timeRaw);
@@ -154,7 +140,8 @@ exports.getSensorHistory = async (req, res) => {
                 time: timeString,
                 temp: log.data?.temperature || 0,
                 hum: log.data?.humidity || 0,
-                power: log.data?.ampere || 0
+                power: log.data?.ampere || 0,
+                lux: log.data?.light_level || 0
             };
         });
 
