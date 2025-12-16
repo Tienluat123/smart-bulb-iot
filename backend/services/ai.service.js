@@ -15,7 +15,7 @@ const runPythonAI = (temp, hum, lux) => {
         }
 
         if (!fs.existsSync(pythonExecutable)) {
-            pythonExecutable = 'python3'; // Fallback
+            pythonExecutable = 'python'; // Fallback
         }
 
         const scriptPath = path.resolve(__dirname, '../ai_service/predict.py');

@@ -52,9 +52,20 @@ export const useSmartDevice = () => {
             if (historyRes.length > 0) {
                 setChartData({
                     labels: historyRes.map(item => {
-                        // Format giờ cho đẹp (Ví dụ: 10:30:05)
-                        const d = new Date(item.time);
-                        return `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
+                        if (item.time) {
+                            return item.time;
+                        }
+                        if (item.timestamp) {
+                            const d = new Date(item.timestamp);
+                            if (!isNaN(d.getTime())) {
+                                const hours = String(d.getHours()).padStart(2, '0');
+                                const minutes = String(d.getMinutes()).padStart(2, '0');
+                                const seconds = String(d.getSeconds()).padStart(2, '0');
+                                return `${hours}:${minutes}:${seconds}`;
+                            }
+                        }
+                        
+                        return "--:--:--";
                     }),
                     datasets: [
                         {
@@ -78,7 +89,6 @@ export const useSmartDevice = () => {
             }
             setLoading(false);
         } catch (error) {
-            console.error("Lỗi fetch initial data", error);
         }
     }, []);
 
@@ -106,32 +116,43 @@ export const useSmartDevice = () => {
         // Lấy Device ID để join room
         const storedUser = localStorage.getItem('userInfo');
         if (storedUser) {
-            const { device_id } = JSON.parse(storedUser);
-            if (device_id) {
-                socketRef.current.emit('join_device', device_id); // Gõ cửa phòng
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                const deviceId = parsedUser.deviceId;
+                if (deviceId) {
+                    socketRef.current.emit('join_device', deviceId);
+                }
+            } catch (e) {
             }
         }
 
-        // C. Lắng nghe sự kiện 'sensor_update' từ Backend
+        // Lắng nghe khi kết nối thành công
+        socketRef.current.on('connect', () => {});
+        socketRef.current.on('disconnect', () => {});
+
         socketRef.current.on('sensor_update', (newData) => {
-            console.log("Socket nhận dữ liệu mới:", newData);
-            
-            // 1. Cập nhật số liệu hiển thị (Real-time)
+            const calculatedLux = calculateLux(newData.lux);
             setDeviceData(prev => ({
                 ...prev,
                 temp: newData.temp,
                 hum: newData.hum,
                 amp: newData.amp,
-                lux: calculateLux(newData.lux),
+                lux: calculatedLux,
                 raw_lux: newData.lux
             }));
 
             // 2. Cập nhật biểu đồ (Đẩy thêm 1 điểm vào cuối mảng)
             setChartData(prevChart => {
-                const newLabel = new Date(newData.time || Date.now()).toLocaleTimeString('vi-VN');
+                const timeValue = newData.timestamp || newData.time || Date.now();
+                const dateObj = new Date(timeValue);
                 
-                // Copy mảng cũ và thêm phần tử mới
-                // Giới hạn chỉ giữ 20 điểm cuối cùng để biểu đồ không bị lag
+                let newLabel;
+                if (isNaN(dateObj.getTime())) {
+                    newLabel = new Date().toLocaleTimeString('vi-VN');
+                } else {
+                    newLabel = dateObj.toLocaleTimeString('vi-VN');
+                }
+                
                 const newLabels = [...prevChart.labels, newLabel].slice(-20); 
                 const newTempData = [...prevChart.datasets[0].data, newData.temp].slice(-20);
                 const newHumData = [...prevChart.datasets[1].data, newData.hum].slice(-20);

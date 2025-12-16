@@ -7,7 +7,6 @@ let ioInstance = null;
 const initSocket = (io) => {
     ioInstance = io; 
 
-    // --- 1. ĐỒNG BỘ BÁO THỨC TỪ DB VÀO RAM ---
     const syncAlarmsFromDB = async () => {
         try {
             const devices = await Device.find({ "alarm_config.is_active": true });
@@ -16,14 +15,12 @@ const initSocket = (io) => {
                     activeAlarms.set(device.device_id, device.alarm_config.time);
                 }
             });
-            console.log(`[SYSTEM] Đã đồng bộ ${activeAlarms.size} báo thức vào RAM.`);
         } catch (err) {
             console.error("Lỗi sync alarm:", err);
         }
     };
     syncAlarmsFromDB();
 
-    // --- 2. VÒNG LẶP CHECK BÁO THỨC (TIMER) ---
     setInterval(async () => {
         if (activeAlarms.size === 0) return;
 
@@ -32,16 +29,10 @@ const initSocket = (io) => {
 
         for (const [deviceId, alarmTime] of activeAlarms.entries()) {
             if (currentString === alarmTime) {
-                console.log(`RENG RENG! Thiết bị ${deviceId} đến giờ: ${currentString}`);
+                console.log(`Alarm triggered: ${deviceId}`);
 
-                // A. Hú còi (MQTT)
                 sendCommand(deviceId, { action: "BUZZER", duration: 10000 });
-
-                // B. Báo cho Web (Realtime Event)
-                // Chỉ gửi sự kiện "đã kích hoạt", không gửi toàn bộ config
                 io.to(deviceId).emit('alarm_triggered', { time: currentString });
-
-                // C. Tắt báo thức (RAM + DB)
                 activeAlarms.delete(deviceId);
                 await Device.findOneAndUpdate(
                     { device_id: deviceId },
@@ -54,16 +45,18 @@ const initSocket = (io) => {
         }
     }, 10000); 
 
-    // --- 3. XỬ LÝ KẾT NỐI SOCKET ---
     io.on('connection', (socket) => {
+        console.log(`[SOCKET] New connection: ${socket.id}`);
         
-        // ➤ CHỈ JOIN PHÒNG (Pure Joining)
-        // Không gửi lại data gì cả. Frontend tự fetch API lúc mới load.
         socket.on('join_device', (deviceId) => {
             if (deviceId) {
                 socket.join(deviceId);
-                console.log(`🔌 Socket ${socket.id} đã vào phòng: ${deviceId}`);
+                console.log(`[SOCKET] Device ${deviceId} joined`);
             }
+        });
+
+        socket.on('error', (error) => {
+            console.error(`[SOCKET] Error:`, error);
         });
 
         // ➤ LOGIC POMODORO (Giữ nguyên)
@@ -71,18 +64,15 @@ const initSocket = (io) => {
             const { deviceId, duration } = data;
             if(!deviceId) return;
 
-            // Kiểm tra bảo mật cơ bản: Socket này có đang ở trong phòng deviceId không?
             if (!socket.rooms.has(deviceId)) {
-                console.warn(`⚠️ Socket lạ cố tình gửi Pomodoro cho ${deviceId}`);
+                console.warn(`Unauthorized pomodoro: ${deviceId}`);
                 return;
             }
 
-            console.log(`Pomodoro xong: ${deviceId} (+${duration || 25}p)`);
+            console.log(`Pomodoro done: ${deviceId}`);
             
-            // 1. Hú còi báo hiệu
             sendCommand(deviceId, { action: "BUZZER", duration: 3000 }); 
 
-            // 2. Cộng KPI vào DB
             try {
                 await Device.findOneAndUpdate(
                     { device_id: deviceId },
