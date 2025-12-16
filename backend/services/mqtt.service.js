@@ -2,49 +2,71 @@ const mqtt = require('mqtt');
 const Device = require('../models/device.model');
 const SensorLog = require('../models/sensorlog.model');
 
-// Cấu hình MQTT
-const MQTT_BROKER = process.env.MQTT_BROKER || "mqtt://broker.hivemq.com"; // Hoặc broker của bạn
+const MQTT_BROKER = process.env.MQTT_BROKER || "mqtt://broker.hivemq.com";
 const TOPIC_SENSOR_PATTERN = "smartbulb/sensor/+"; 
 
-const BATCH_SIZE = 50;        // Đủ 50 tin thì ghi xuống DB
-const FLUSH_INTERVAL = 5000;  // Hoặc cứ 5 giây ghi 1 lần (dù chưa đủ 50)
+const BATCH_SIZE = 50;
+const FLUSH_INTERVAL = 5000;
 
 let mqttClient = null;
-let sensorBuffer = [];        // Cái "xô" chứa dữ liệu chờ ghi
-let validDeviceIds = new Set(); // Danh sách thiết bị hợp lệ (Cache)
+let sensorBuffer = [];
+let validDeviceIds = new Set();
 
-/**
- * 1. Hàm load danh sách thiết bị hợp lệ vào RAM
- * Giúp check thiết bị cực nhanh, không cần query DB mỗi lần nhận tin
- */
 const loadValidDevices = async () => {
     try {
         const devices = await Device.find({}, 'device_id');
         validDeviceIds.clear();
         devices.forEach(d => validDeviceIds.add(d.device_id));
-        console.log(`[CACHE] Đã load ${validDeviceIds.size} thiết bị hợp lệ vào RAM.`);
     } catch (error) {
         console.error("Lỗi load cache device:", error);
     }
 };
 
-/**
- * 2. Hàm đổ dữ liệu từ "xô" (RAM) xuống "kho" (DB)
- */
 const flushBufferToDB = async () => {
     if (sensorBuffer.length === 0) return;
 
-    // Copy dữ liệu ra và làm sạch xô ngay lập tức để đón tin mới
-    const dataToSave = [...sensorBuffer];
+    const dataToProcess = [...sensorBuffer];
     sensorBuffer = [];
 
     try {
-        // insertMany cực nhanh với Time-Series Collection
-        await SensorLog.insertMany(dataToSave);
-        console.log(`[BATCH] Đã lưu ${dataToSave.length} bản ghi sensor xuống DB.`);
+        const groupedByDevice = {};
+        
+        dataToProcess.forEach(record => {
+            if (!groupedByDevice[record.device_id]) {
+                groupedByDevice[record.device_id] = [];
+            }
+            groupedByDevice[record.device_id].push(record);
+        });
+
+        const recordsToInsert = [];
+        
+        for (const [deviceId, records] of Object.entries(groupedByDevice)) {
+            const avgTemperature = records.reduce((sum, r) => sum + (r.data?.temperature || 0), 0) / records.length;
+            const avgHumidity = records.reduce((sum, r) => sum + (r.data?.humidity || 0), 0) / records.length;
+            const avgAmpere = records.reduce((sum, r) => sum + (r.data?.ampere || 0), 0) / records.length;
+            const avgLight = records.reduce((sum, r) => sum + (r.data?.light_level || 0), 0) / records.length;
+            
+            const avgRecord = {
+                device_id: deviceId,
+                timestamp: new Date(),
+                data: {
+                    temperature: Math.round(avgTemperature * 10) / 10,
+                    humidity: Math.round(avgHumidity * 10) / 10,
+                    ampere: Math.round(avgAmpere * 10) / 10,
+                    light_level: Math.round(avgLight)
+                },
+                session_duration: 0,
+                record_count: records.length
+            };
+            
+            recordsToInsert.push(avgRecord);
+        }
+
+        await SensorLog.insertMany(recordsToInsert);
+        console.log(`[BATCH] Saved ${recordsToInsert.length} average records to DB`);
+        
     } catch (err) {
         console.error("Lỗi lưu Batch Sensor:", err);
-        // Nếu lỗi mạng DB, có thể push ngược lại vào buffer để thử sau
     }
 };
 
@@ -55,46 +77,48 @@ const connectMQTT = (io) => {
     mqttClient = mqtt.connect(MQTT_BROKER);
     
     mqttClient.on('connect', () => {
-        console.log('MQTT Connected (Batching Mode)');
+        console.log('MQTT Connected');
         mqttClient.subscribe(TOPIC_SENSOR_PATTERN);
-
-        // Thiết lập timer: Cứ 5 giây tự động đổ dữ liệu xuống DB 1 lần
         setInterval(flushBufferToDB, FLUSH_INTERVAL);
     });
 
     mqttClient.on('message', async (topic, message) => {
-        // Topic mẫu: smartbulb/sensor/ESP32_01
         const topicParts = topic.split('/');
         const deviceId = topicParts[2];
 
-        // KIỂM TRA HỢP LỆ (CHECK CACHE) 
-        // Nếu ID không có trong Set -> Bỏ qua ngay
         if (!validDeviceIds.has(deviceId)) {
-            // Check lại DB 1 lần cuối đề phòng mới thêm thiết bị mà chưa reload cache
             const exists = await Device.exists({ device_id: deviceId });
             if (exists) {
-                validDeviceIds.add(deviceId); // Thêm vào cache
+                validDeviceIds.add(deviceId);
             } else {
-                console.warn(`[BLOCK] Từ chối dữ liệu từ thiết bị lạ: ${deviceId}`);
+                console.warn(`Unknown device: ${deviceId}`);
                 return; 
             }
         }
 
-        // XỬ LÝ DỮ LIỆU
         if (topicParts[1] === 'sensor') {
             try {
                 const payload = JSON.parse(message.toString());
                 
-                // Realtime cho Web (Socket) -> Gửi ngay lập tức, không được delay
-                io.to(deviceId).emit('sensor_update', {
+                const currentTime = new Date().toISOString();
+                const sensorData = {
                     temp: payload.temp,
                     hum: payload.hum,
                     amp: payload.amp || 0,
-                    lux: payload.lux, // Gửi lux gốc
-                    time: new Date().toISOString() // Kèm thời gian để vẽ biểu đồ
-                });
+                    lux: payload.lux,
+                    time: currentTime,
+                    timestamp: currentTime
+                };
+                
+                io.to(deviceId).emit('sensor_update', sensorData);
+                
+                const time = new Date(currentTime).toLocaleString('vi-VN');
+                console.log(
+                    `[SOCKET SENT] [${time}] Device: ${deviceId} | ` +
+                    `Temp: ${sensorData.temp}C | Hum: ${sensorData.hum}% | ` +
+                    `Light: ${sensorData.lux} lux | Amp: ${sensorData.amp}A`
+                );
 
-                // B. Gom dữ liệu vào Buffer (Chờ lưu DB)
                 sensorBuffer.push({
                     device_id: deviceId,
                     timestamp: new Date(),
@@ -107,7 +131,6 @@ const connectMQTT = (io) => {
                     session_duration: 0 
                 });
 
-                // C. Nếu xô đầy -> Đổ ngay
                 if (sensorBuffer.length >= BATCH_SIZE) {
                     await flushBufferToDB();
                 }
@@ -121,7 +144,7 @@ const connectMQTT = (io) => {
                 );
 
             } catch (err) {
-                console.error(`Lỗi xử lý msg [${deviceId}]:`, err.message);
+                console.error(`Error processing [${deviceId}]:`, err.message);
             }
         }
     });

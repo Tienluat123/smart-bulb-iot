@@ -140,8 +140,8 @@ exports.getSensorHistory = async (req, res) => {
             const timeRaw = log.timestamp || log.createdAt || log._id.getTimestamp();
             const date = new Date(timeRaw);
 
-            // Format HH:MM
-            const timeString = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            // Format HH:MM:SS
+            const timeString = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
             
             return {
                 time: timeString,
@@ -152,7 +152,8 @@ exports.getSensorHistory = async (req, res) => {
             };
         });
 
-        res.json(formattedData);
+        // Reverse để data cũ nhất ở đầu, mới nhất ở cuối (đúng timeline)
+        res.json(formattedData.reverse());
 
     } catch (error) {
         console.error("Lỗi lấy lịch sử:", error);
