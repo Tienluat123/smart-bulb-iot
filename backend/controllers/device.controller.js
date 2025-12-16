@@ -1,23 +1,26 @@
 const Device = require('../models/device.model');
 const User = require('../models/user.model');
 const SensorLog = require('../models/sensorlog.model');
-const { sendCommand } = require('../services/mqtt.service'); // Import hàm gửi lệnh MQTT
+const { sendCommand } = require('../services/mqtt.service');
 const { updateAlarmInRAM } = require('../services/socket.service');
+
+
 /**
  * @description Điều khiển Bật/Tắt thiết bị (Tự động lấy DeviceID từ Token)
  * @route POST /api/device/control/power
  * @body { "state": "ON" } hoặc { "state": "OFF" }
  */
+
 exports.controlPower = async (req, res) => {
     try {
-        // 1. Validate đầu vào (Chỉ chấp nhận ON hoặc OFF)
+        // Validate đầu vào (Chỉ chấp nhận ON hoặc OFF)
         const { state } = req.body; 
         if (!['ON', 'OFF'].includes(state)) {
             return res.status(400).json({ message: "Trạng thái không hợp lệ. Chỉ gửi 'ON' hoặc 'OFF'." });
         }
 
-        // 2. Lấy Device ID từ User Token (BẢO MẬT)
-        const userId = req.user.id; // Lấy từ middleware verifyToken
+        // Lấy Device ID từ User Token
+        const userId = req.user.id;
         const user = await User.findById(userId);
 
         if (!user || !user.device_id) {
@@ -39,10 +42,10 @@ exports.controlPower = async (req, res) => {
             return res.status(404).json({ message: "Không tìm thấy thiết bị trong hệ thống." });
         }
 
-        // 4. Gửi lệnh MQTT (Chỉ gửi Power)
+        // Gửi lệnh MQTT (Chỉ gửi Power)
         sendCommand(targetDeviceId, { power: state });
 
-        // 5. Trả về kết quả
+        // Trả về kết quả
         res.status(200).json({ 
             message: `Đã gửi lệnh ${state} thành công.`,
             state: updatedDevice.current_state
@@ -56,31 +59,32 @@ exports.controlPower = async (req, res) => {
 
 /**
  * @description Hàm kiểm tra trạng thái thiết bị
- * @route GET /api/device/:deviceId/status
+ * @route GET /api/device/status
  */
+
 exports.getDeviceStatus = async (req, res) => {
     try {
 
-        const userId = req.user.id; 
-        
+        //Lấy Device ID từ User Token
+        const userId = req.user.id;    
         const user = await User.findById(userId);
-
         if (!user || !user.device_id) {
             return res.status(404).json({ 
                 message: "Tài khoản của bạn chưa liên kết với thiết bị nào." 
             });
         }
 
-        const targetDeviceId = user.device_id; // Lấy ID thiết bị từ User
+        const targetDeviceId = user.device_id;
 
-        // BƯỚC 2: Tìm thiết bị trong bảng Device
+        //Tìm thiết bị trong bảng Device
         const device = await Device.findOne({ device_id: targetDeviceId });
-
         if (!device) {
             return res.status(404).json({ 
-                message: "Không tìm thấy thiết bị nào được liên kết với tài khoản của bạn." 
+                message: "Tài khoản của bạn chưa liên kết với thiết bị nào." 
             });
         }
+
+        //Trả về trạng thái thiết bị
         res.json({
             device_id: device.device_id,
             name: device.name,
@@ -96,10 +100,14 @@ exports.getDeviceStatus = async (req, res) => {
     }
 };
 
+/**
+ * @description Lấy lịch sử cảm biến (SensorLog) của thiết bị người dùng
+ * @route GET /api/device/history
+ */
 
 exports.getSensorHistory = async (req, res) => {
     try {
-        // 1. Lấy User ID từ Token
+        // Lấy User ID từ Token
         const userId = req.user.id; 
         
         const user = await User.findById(userId);
@@ -112,22 +120,21 @@ exports.getSensorHistory = async (req, res) => {
 
         const targetDeviceId = user.device_id;
 
-        // 2. Tìm thiết bị (Bước này để check xem device có tồn tại ko, optional)
+        // Tìm thiết bị
         const device = await Device.findOne({ device_id: targetDeviceId });
         if (!device) {
             return res.status(404).json({ message: "Thiết bị không tồn tại trong hệ thống!" });
         }
 
-        // 3. Lấy Log
+        // Lấy Log
         const limit = 10;
-        // LƯU Ý: Nếu DB bạn dùng timestamp thì sort theo timestamp sẽ nhanh hơn
         const logs = await SensorLog.find({ device_id: targetDeviceId })
             .sort({ timestamp: -1}) // Sort theo timestamp hoặc _id đều được (giảm dần)
             .limit(limit);
         
 
 
-        // 4. Format dữ liệu (Đã sửa time)
+        // Format dữ liệu
         const formattedData = logs.map(log => {
             // Lấy thời gian từ nhiều nguồn để đảm bảo không bị NaN
             const timeRaw = log.timestamp || log.createdAt || log._id.getTimestamp();
@@ -156,20 +163,21 @@ exports.getSensorHistory = async (req, res) => {
 
 /**
  * @description Cài đặt báo thức (Chỉ qua REST API - Bảo mật Token)
+ * @route POST /api/device/alarm
  */
 exports.setAlarm = async (req, res) => {
     try {
         const { time, is_active } = req.body;
         const userId = req.user.id; 
         
-        // 1. Lấy Device ID (Giữ nguyên)
+        // Lấy Device ID (Giữ nguyên)
         const user = await User.findById(userId);
         if (!user || !user.device_id) {
             return res.status(404).json({ message: "Chưa liên kết thiết bị." });
         }
         const targetDeviceId = user.device_id;
 
-        // 2. Cập nhật DB (Giữ nguyên)
+        // Cập nhật DB (Giữ nguyên)
         const updatedDevice = await Device.findOneAndUpdate(
             { device_id: targetDeviceId },
             { 
@@ -183,15 +191,15 @@ exports.setAlarm = async (req, res) => {
              return res.status(404).json({ message: "Thiết bị không tồn tại trong DB." });
         }
 
-        // 3. Cập nhật ngay vào RAM của Socket Service (QUAN TRỌNG NHẤT)
+        // Cập nhật ngay vào RAM của Socket Service
         // Việc này đảm bảo vòng lặp setInterval chạy trên Server sẽ bắt được giờ này.
         updateAlarmInRAM(targetDeviceId, time, is_active);
 
-        // 4. [SỬA LỖI] KHÔNG GỬI GIỜ ALARM XUỐNG CHIP NỮA!
-        // Ta chỉ gửi lệnh Bật Còi (BUZZER) khi Server bắt được giờ!
+
+        // Ta chỉ gửi lệnh Bật Còi (BUZZER) khi Server bắt được giờ
         // sendCommand(targetDeviceId, { alarm_time: time, alarm_active: is_active }); <--- BỎ DÒNG NÀY
 
-        // 5. Trả về kết quả
+        //Trả về kết quả
         res.json({ message: "Đã lưu báo thức", alarm: updatedDevice.alarm_config });
 
     } catch (error) {

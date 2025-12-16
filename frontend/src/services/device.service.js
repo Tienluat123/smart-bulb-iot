@@ -40,8 +40,8 @@ export const getSensorHistory = async () => {
 
 export const setDeviceAlarm = async (time, isActive) => {
     try {
-            const response = await api.post('/device/alarm', { time, is_active: isActive });
-            return response.data;
+        const response = await api.post('/device/alarm', { time, is_active: isActive });
+        return response.data;
     } catch (error) {
         console.error("Lỗi đặt báo thức:", error);
         throw error;

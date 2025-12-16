@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import './AIChat.css'; 
+import ReactMarkdown from 'react-markdown';
 import { sendAIChat, sendWeeklyReport } from '../../services/assistant.service'; 
 
 // Danh sách các từ/kí tự cấm (Ví dụ đơn giản)
@@ -113,7 +114,7 @@ const AIChat = () => {
                         {messages.map((msg, index) => (
                             <div key={index} className={`message ${msg.sender}`}>
                                 <div className="message-content">
-                                    {msg.text}
+                                    <ReactMarkdown>{msg.text}</ReactMarkdown>
                                 </div>
                             </div>
                         ))}

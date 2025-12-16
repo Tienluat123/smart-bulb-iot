@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getDeviceStatus, getSensorHistory, toggleDevicePower } from '../services/device.service';
+import socketIOClient from "socket.io-client"; // 1. Import Socket
+
+const SOCKET_URL = "http://localhost:5001"; // URL Backend
 
 export const useSmartDevice = () => {
     const [deviceData, setDeviceData] = useState({
         temp: '--',
         hum: '--',
         amp: '--',
-        lux: 0,      // <--- Thêm giá trị Lux (đã map về 0-1023)
-        raw_lux: 0,  // (Tuỳ chọn) Lưu giá trị gốc 0-4095 nếu cần debug
+        lux: 0,
+        raw_lux: 0,
         is_light_on: false
     });
 
@@ -17,43 +20,42 @@ export const useSmartDevice = () => {
     });
 
     const [loading, setLoading] = useState(true);
+    const socketRef = useRef();
 
-    // 1. Hàm lấy trạng thái (Chỉ dùng khi load trang hoặc sau khi bấm nút)
-    const fetchStatus = useCallback(async () => {
+    // --- LOGIC MAP LUX (Tách ra để tái sử dụng) ---
+    const calculateLux = (rawLux) => {
+        return Math.round((rawLux / 4095) * 1023);
+    };
+
+    // 1. Lấy dữ liệu LỊCH SỬ (Chỉ chạy 1 lần khi load trang để vẽ biểu đồ cũ)
+    const fetchInitialData = useCallback(async () => {
         try {
+            // A. Lấy trạng thái đèn
             const statusRes = await getDeviceStatus();
+            
+            // B. Lấy lịch sử cảm biến
+            const historyRes = await getSensorHistory();
+            const latestLog = historyRes.length > 0 ? historyRes[historyRes.length - 1] : {};
+            
+            // Cập nhật State ban đầu
             setDeviceData(prev => ({
                 ...prev,
                 is_light_on: statusRes.current_state?.power === 'ON',
-            }));
-        } catch (error) {
-            console.error("Lỗi fetch status", error);
-        }
-    }, []);
-
-    // 2. Hàm lấy lịch sử & cảm biến (Chạy định kỳ 10s)
-    const fetchHistory = useCallback(async () => {
-        try {
-            const historyRes = await getSensorHistory();
-            const latestLog = historyRes.length > 0 ? historyRes[historyRes.length - 1] : {};
-
-            // --- LOGIC MAP LUX (0-4095 -> 0-1023) ---
-            const rawLux = latestLog.lux ?? 0;
-            // Công thức: (Giá trị / Max cũ) * Max mới
-            const mappedLux = Math.round((rawLux / 4095) * 1023);
-
-            setDeviceData(prev => ({
-                ...prev,
                 temp: latestLog.temp ?? '--',
                 hum: latestLog.hum ?? '--',
                 amp: latestLog.power ?? 0,
-                lux: mappedLux,       // Giá trị đã scale (0 - 1023)
-                raw_lux: rawLux       // Giá trị gốc
+                lux: calculateLux(latestLog.lux ?? 0),
+                raw_lux: latestLog.lux ?? 0
             }));
 
+            // Vẽ biểu đồ ban đầu
             if (historyRes.length > 0) {
                 setChartData({
-                    labels: historyRes.map(item => item.time),
+                    labels: historyRes.map(item => {
+                        // Format giờ cho đẹp (Ví dụ: 10:30:05)
+                        const d = new Date(item.time);
+                        return `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
+                    }),
                     datasets: [
                         {
                             label: 'Nhiệt độ (°C)',
@@ -76,44 +78,81 @@ export const useSmartDevice = () => {
             }
             setLoading(false);
         } catch (error) {
-            console.error("Lỗi fetch history", error);
+            console.error("Lỗi fetch initial data", error);
         }
     }, []);
 
-    // 3. Hàm Bật/Tắt đèn
+    // 2. Hàm Bật/Tắt đèn (Giữ nguyên)
     const toggleLight = async () => {
         const newState = !deviceData.is_light_on;
         const newStateString = newState ? 'ON' : 'OFF';
-
-        // Cập nhật giao diện NGAY LẬP TỨC (Optimistic UI)
         setDeviceData(prev => ({ ...prev, is_light_on: newState }));
-
         try {
             await toggleDevicePower(newStateString);
-            // Không cần gọi lại fetchStatus nữa nếu bạn tin tưởng API thành công
-            // Web tự nhớ trạng thái vừa bấm
         } catch (error) {
-            // Nếu lỗi thì quay xe về cũ
             setDeviceData(prev => ({ ...prev, is_light_on: !newState }));
-            alert("Lỗi kết nối! Không thể điều khiển đèn.");
+            alert("Lỗi kết nối!");
         }
     };
 
-    // 4. SETUP LOGIC CHẠY (Effect)
+    // 3. SETUP SOCKET & INITIAL LOAD
     useEffect(() => {
-        // A. Chạy ngay khi vào trang (Mount)
-        fetchStatus();  // Lấy trạng thái đèn 1 lần
-        fetchHistory(); // Lấy dữ liệu cảm biến 1 lần
+        // A. Gọi API lấy dữ liệu cũ 1 lần duy nhất
+        fetchInitialData();
 
-        // B. Thiết lập vòng lặp CHO CẢM BIẾN THÔI (10s)
-        const historyInterval = setInterval(fetchHistory, 2000);
+        // B. Kết nối Socket
+        socketRef.current = socketIOClient(SOCKET_URL);
 
-        // C. Dọn dẹp
+        // Lấy Device ID để join room
+        const storedUser = localStorage.getItem('userInfo');
+        if (storedUser) {
+            const { device_id } = JSON.parse(storedUser);
+            if (device_id) {
+                socketRef.current.emit('join_device', device_id); // Gõ cửa phòng
+            }
+        }
+
+        // C. Lắng nghe sự kiện 'sensor_update' từ Backend
+        socketRef.current.on('sensor_update', (newData) => {
+            console.log("Socket nhận dữ liệu mới:", newData);
+            
+            // 1. Cập nhật số liệu hiển thị (Real-time)
+            setDeviceData(prev => ({
+                ...prev,
+                temp: newData.temp,
+                hum: newData.hum,
+                amp: newData.amp,
+                lux: calculateLux(newData.lux),
+                raw_lux: newData.lux
+            }));
+
+            // 2. Cập nhật biểu đồ (Đẩy thêm 1 điểm vào cuối mảng)
+            setChartData(prevChart => {
+                const newLabel = new Date(newData.time || Date.now()).toLocaleTimeString('vi-VN');
+                
+                // Copy mảng cũ và thêm phần tử mới
+                // Giới hạn chỉ giữ 20 điểm cuối cùng để biểu đồ không bị lag
+                const newLabels = [...prevChart.labels, newLabel].slice(-20); 
+                const newTempData = [...prevChart.datasets[0].data, newData.temp].slice(-20);
+                const newHumData = [...prevChart.datasets[1].data, newData.hum].slice(-20);
+
+                return {
+                    labels: newLabels,
+                    datasets: [
+                        { ...prevChart.datasets[0], data: newTempData },
+                        { ...prevChart.datasets[1], data: newHumData }
+                    ]
+                };
+            });
+        });
+
+        // D. Cleanup khi thoát trang
         return () => {
-            clearInterval(historyInterval);
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
         };
-        // Lưu ý: Không còn statusInterval nữa!
-    }, [fetchStatus, fetchHistory]);
+    }, [fetchInitialData]);
 
     return { deviceData, chartData, toggleLight, loading };
 };

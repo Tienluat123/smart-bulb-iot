@@ -3,7 +3,7 @@ import api from './api.service'; // Import instance Axios đã cấu hình
 // Gửi câu hỏi đến Trợ lý AI
 export const sendAIChat = async (question) => {
     // Giả định Backend API endpoint là /api/assistant/chat
-    const response = await api.post('/chat', { question });
+    const response = await api.post('/chat', { message: question });
     return response;
 };
 
