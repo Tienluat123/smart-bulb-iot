@@ -107,7 +107,7 @@ const Profile = () => {
             <main className="main-content">
                 <div className="profile-container">
                     <div className="profile-header">
-                        <h2>Hồ sơ của tôi 👤</h2>
+                        <h2>Hồ sơ của tôi</h2>
                         <p>Quản lý thông tin và bảo mật tài khoản</p>
                     </div>
 

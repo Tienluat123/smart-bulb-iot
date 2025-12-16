@@ -18,4 +18,4 @@ const SensorLogSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('SensorLog', SensorLogSchema);
+module.exports = mongoose.models.SensorLog || mongoose.model('SensorLog', SensorLogSchema);

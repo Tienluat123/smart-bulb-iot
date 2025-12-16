@@ -1,13 +1,13 @@
 const Device = require('../models/device.model');
-const { sendCommand } = require('./mqtt.service'); // Import hàm gửi lệnh MQTT
+const { sendCommand } = require('./mqtt.service'); 
 
 const activeAlarms = new Map();
-let ioInstance = null; // Biến để giữ instance của Socket.IO
+let ioInstance = null; 
 
 const initSocket = (io) => {
-    ioInstance = io; // Gán instance vào biến toàn cục
+    ioInstance = io; 
 
-    // 1. Khi Server khởi động: Load toàn bộ báo thức đang bật từ DB vào RAM
+    // --- 1. ĐỒNG BỘ BÁO THỨC TỪ DB VÀO RAM ---
     const syncAlarmsFromDB = async () => {
         try {
             const devices = await Device.find({ "alarm_config.is_active": true });
@@ -16,14 +16,14 @@ const initSocket = (io) => {
                     activeAlarms.set(device.device_id, device.alarm_config.time);
                 }
             });
-            console.log(`🔄 Đã đồng bộ ${activeAlarms.size} báo thức vào RAM.`);
+            console.log(`[SYSTEM] Đã đồng bộ ${activeAlarms.size} báo thức vào RAM.`);
         } catch (err) {
             console.error("Lỗi sync alarm:", err);
         }
     };
     syncAlarmsFromDB();
 
-    // 2. Vòng lặp kiểm tra báo thức (Quét qua danh sách Map)
+    // --- 2. VÒNG LẶP CHECK BÁO THỨC (TIMER) ---
     setInterval(async () => {
         if (activeAlarms.size === 0) return;
 
@@ -34,88 +34,73 @@ const initSocket = (io) => {
             if (currentString === alarmTime) {
                 console.log(`RENG RENG! Thiết bị ${deviceId} đến giờ: ${currentString}`);
 
-                // A. Hú còi (Gửi MQTT xuống đúng thiết bị đó)
+                // A. Hú còi (MQTT)
                 sendCommand(deviceId, { action: "BUZZER", duration: 10000 });
 
-                // B. Báo cho Web (Chỉ gửi vào phòng của thiết bị đó)
+                // B. Báo cho Web (Realtime Event)
+                // Chỉ gửi sự kiện "đã kích hoạt", không gửi toàn bộ config
                 io.to(deviceId).emit('alarm_triggered', { time: currentString });
 
-                // C. Tắt báo thức trong RAM và DB (để không kêu lặp lại)
+                // C. Tắt báo thức (RAM + DB)
                 activeAlarms.delete(deviceId);
-                
                 await Device.findOneAndUpdate(
                     { device_id: deviceId },
                     { "alarm_config.is_active": false }
                 );
 
-                // D. Cập nhật lại giao diện Web (Vì đã tắt)
+                // D. Báo cho Web cập nhật lại nút gạt (Switch OFF)
                 io.to(deviceId).emit('alarm_updated', { time: alarmTime, active: false });
             }
         }
-    }, 10000); // Check mỗi 10s
+    }, 10000); 
 
-    // 3. Xử lý kết nối Socket từ Frontend
+    // --- 3. XỬ LÝ KẾT NỐI SOCKET ---
     io.on('connection', (socket) => {
         
-        socket.on('join_device', async (deviceId) => {
-            socket.join(deviceId);
-            const time = activeAlarms.get(deviceId) || null;
-            const isActive = activeAlarms.has(deviceId);
-            socket.emit('alarm_updated', { time, active: isActive });
+        // ➤ CHỈ JOIN PHÒNG (Pure Joining)
+        // Không gửi lại data gì cả. Frontend tự fetch API lúc mới load.
+        socket.on('join_device', (deviceId) => {
+            if (deviceId) {
+                socket.join(deviceId);
+                console.log(`🔌 Socket ${socket.id} đã vào phòng: ${deviceId}`);
+            }
         });
 
-        // Đặt báo thức qua Socket (Ưu tiên dùng API REST, nhưng vẫn giữ lại)
-        socket.on('set_alarm', async (data) => {
-            const { deviceId, time, is_active } = data;
-            if(!deviceId || !time) return;
+        // ➤ LOGIC POMODORO (Giữ nguyên)
+        socket.on('pomodoro_finished', async (data) => {
+            const { deviceId, duration } = data;
+            if(!deviceId) return;
 
+            // Kiểm tra bảo mật cơ bản: Socket này có đang ở trong phòng deviceId không?
+            if (!socket.rooms.has(deviceId)) {
+                console.warn(`⚠️ Socket lạ cố tình gửi Pomodoro cho ${deviceId}`);
+                return;
+            }
+
+            console.log(`Pomodoro xong: ${deviceId} (+${duration || 25}p)`);
+            
+            // 1. Hú còi báo hiệu
+            sendCommand(deviceId, { action: "BUZZER", duration: 3000 }); 
+
+            // 2. Cộng KPI vào DB
             try {
                 await Device.findOneAndUpdate(
                     { device_id: deviceId },
-                    { "alarm_config.time": time, "alarm_config.is_active": is_active || true },
-                    { upsert: true }
+                    { $inc: { 
+                        "pomodoro_stats.total_sessions": 1, 
+                        "pomodoro_stats.total_minutes": duration || 25 
+                    } }
                 );
-                updateAlarmInRAM(deviceId, time, is_active || true); 
-                console.log(`Đã đặt báo thức (qua Socket) cho ${deviceId} lúc ${time}`);
-            } catch (e) { console.error(e); }
-        });
-
-        // ============================================
-        // LOGIC POMODORO ĐÃ HOÀN THIỆN
-        // ============================================
-        socket.on('pomodoro_finished', async (data) => {
-            // data = { deviceId: "ESP32_001", duration: 25 }
-            const { deviceId, duration } = data;
-
-            if(!deviceId) return;
-
-            console.log(`Pomodoro xong trên thiết bị: ${deviceId}. Cộng ${duration || 25} phút vào KPI.`);
-            
-            // Hú còi báo hiệu kết thúc Pomodoro
-            sendCommand(deviceId, { action: "BUZZER", duration: 3000 }); 
-
-            // Cộng KPI vào DB bằng toán tử $inc
-            await Device.findOneAndUpdate(
-                { device_id: deviceId },
-                { $inc: { 
-                    "pomodoro_stats.total_sessions": 1, 
-                    "pomodoro_stats.total_minutes": duration || 25 
-                } },
-                { new: true } // Lấy bản ghi mới để debug nếu cần
-            );
-        });
-        // ============================================
-        
-        // Điều khiển đèn thủ công
-        socket.on('control_light', (data) => {
-            if(data.deviceId) {
-                sendCommand(data.deviceId, data); 
+                // (Tùy chọn) Có thể emit ngược lại để báo "Cộng điểm thành công" nếu cần
+                // io.to(deviceId).emit('pomodoro_update_success', { added: duration });
+            } catch (error) {
+                console.error("Lỗi lưu Pomodoro:", error);
             }
         });
     });
 };
 
-// [HÀM CẦU NỐI] Để Controller REST API gọi vào, đồng bộ RAM và báo cho Client
+// [HÀM CẦU NỐI] Dùng cho Controller (API) gọi khi User đặt báo thức bằng HTTP Request
 const updateAlarmInRAM = (deviceId, time, isActive) => {
     if (isActive && time) {
         activeAlarms.set(deviceId, time);
@@ -125,7 +110,7 @@ const updateAlarmInRAM = (deviceId, time, isActive) => {
         console.log(`RAM Updated: Hủy báo thức ${deviceId}`);
     }
 
-    // Báo cho tất cả Client đang xem thiết bị này biết
+    // Bắn socket báo cho Frontend cập nhật UI Realtime (nếu đang mở app)
     if (ioInstance) {
         ioInstance.to(deviceId).emit('alarm_updated', { time, active: isActive });
     }

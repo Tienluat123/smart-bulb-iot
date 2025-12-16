@@ -1,72 +1,53 @@
 import { useState, useEffect } from 'react';
-import socketIOClient from "socket.io-client";
-import { getDeviceStatus, setDeviceAlarm } from '../services/device.service';
+import { setDeviceAlarm, getDeviceStatus } from '../services/device.service'; 
+// Nhớ import API setDeviceAlarm (đã sửa ở bước trước dùng API chứ ko dùng socket)
 
-const SOCKET_URL = "http://localhost:5001"; // URL Backend của bạn
-
-export const useSocketAlarm = () => {
+export const useSocketAlarm = (socketInstance) => { // <--- NHẬN SOCKET TỪ NGOÀI
     const [alarm, setAlarm] = useState({ time: '07:00', is_active: false });
-    const [socketInstance, setSocketInstance] = useState(null);
 
-    // 1. Lấy cấu hình báo thức ban đầu từ API (khi load trang)
+    // 1. Lấy dữ liệu ban đầu từ API
     useEffect(() => {
-        const fetchAlarmConfig = async () => {
+        const fetchConfig = async () => {
             try {
-                const statusRes = await getDeviceStatus();
-                if (statusRes.alarm_config) {
-                    setAlarm(statusRes.alarm_config);
-                }
-            } catch (error) {
-                console.error("Lỗi lấy config báo thức", error);
-            }
+                const res = await getDeviceStatus();
+                if (res.alarm_config) setAlarm(res.alarm_config);
+            } catch (e) { console.error(e); }
         };
-        fetchAlarmConfig();
+        fetchConfig();
     }, []);
 
-    // 2. Kết nối Socket & Lắng nghe sự kiện
+    // 2. Lắng nghe Socket để cập nhật Realtime
     useEffect(() => {
-        const socket = socketIOClient(SOCKET_URL);
-        setSocketInstance(socket);
+        if (!socketInstance) return;
 
-        // Lấy thông tin user để join đúng phòng
-        const storedUser = localStorage.getItem('userInfo');
-        if (storedUser) {
-            const { deviceId } = JSON.parse(storedUser);
-            if (deviceId) {
-                socket.emit('join_device', deviceId);
-            }
-        }
+        // Khi báo thức reng
+        socketInstance.on('alarm_triggered', (data) => {
+            alert(`RENG RENG! Bây giờ là: ${data.time}`);
+        });
 
-        // Nghe sự kiện: Báo thức được cập nhật (từ nơi khác)
-        socket.on("alarm_updated", (data) => {
+        // Khi có ai đó thay đổi báo thức (đồng bộ trạng thái)
+        socketInstance.on('alarm_updated', (data) => {
+            console.log("Sync Alarm:", data);
             setAlarm({ time: data.time, is_active: data.active });
         });
 
-        // Nghe sự kiện: BÁO THỨC RENG RENG
-        socket.on("alarm_triggered", (data) => {
-            alert(`RENG RENG! Đã đến giờ: ${data.time}`);
-            // Tự động tắt switch trên UI
-            setAlarm(prev => ({ ...prev, is_active: false }));
-        });
-
-        // Cleanup khi thoát trang
         return () => {
-            socket.disconnect();
+            socketInstance.off('alarm_triggered');
+            socketInstance.off('alarm_updated');
         };
-    }, []);
+    }, [socketInstance]);
 
-    // 3. Hàm lưu báo thức (Gọi API + Update UI)
-    const saveAlarm = async (newTime, newActive) => {
-        // Cập nhật UI ngay cho mượt
-        setAlarm({ time: newTime, is_active: newActive });
-
+    // 3. Hàm lưu báo thức (Gọi API)
+    const saveAlarm = async (time, isActive) => {
+        // Cập nhật giao diện ngay cho mượt
+        setAlarm({ time, is_active: isActive }); 
         try {
-            await setDeviceAlarm(newTime, newActive);
+            await setDeviceAlarm(time, isActive);
         } catch (error) {
             console.error("Lỗi lưu báo thức:", error);
-            alert("Lỗi khi lưu báo thức!");
+            // Nếu lỗi thì revert lại state (tuỳ chọn)
         }
     };
 
-    return { alarm, saveAlarm, socketInstance };
+    return { alarm, saveAlarm };
 };
