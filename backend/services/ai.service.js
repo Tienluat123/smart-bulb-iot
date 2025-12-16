@@ -9,9 +9,9 @@ const runPythonAI = (temp, hum, lux) => {
         
         // [SỬA LỖI] Ở đây dùng global 'process' để check hệ điều hành
         if (process.platform === "win32") {
-            pythonExecutable = path.resolve(__dirname, '../venv/Scripts/python.exe');
+            pythonExecutable = path.resolve(__dirname, '../IOT/Scripts/python.exe');
         } else {
-            pythonExecutable = path.resolve(__dirname, '../venv/bin/python');
+            pythonExecutable = path.resolve(__dirname, '../IOT/bin/python');
         }
 
         if (!fs.existsSync(pythonExecutable)) {
