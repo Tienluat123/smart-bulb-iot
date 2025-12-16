@@ -5,7 +5,9 @@ export const useSmartDevice = () => {
     const [deviceData, setDeviceData] = useState({
         temp: '--',
         hum: '--',
-        amp: '--',     // Hoặc Lux tuỳ bạn map
+        amp: '--',
+        lux: 0,      // <--- Thêm giá trị Lux (đã map về 0-1023)
+        raw_lux: 0,  // (Tuỳ chọn) Lưu giá trị gốc 0-4095 nếu cần debug
         is_light_on: false
     });
 
@@ -35,12 +37,18 @@ export const useSmartDevice = () => {
             const historyRes = await getSensorHistory();
             const latestLog = historyRes.length > 0 ? historyRes[historyRes.length - 1] : {};
 
+            // --- LOGIC MAP LUX (0-4095 -> 0-1023) ---
+            const rawLux = latestLog.lux ?? 0;
+            // Công thức: (Giá trị / Max cũ) * Max mới
+            const mappedLux = Math.round((rawLux / 4095) * 1023);
+
             setDeviceData(prev => ({
                 ...prev,
-                // Cập nhật các chỉ số môi trường (Nhiệt, Ẩm, Amp/Lux)
                 temp: latestLog.temp ?? '--',
                 hum: latestLog.hum ?? '--',
-                amp: latestLog.power ?? 0 // Map dữ liệu Amp hoặc Lux ở đây
+                amp: latestLog.power ?? 0,
+                lux: mappedLux,       // Giá trị đã scale (0 - 1023)
+                raw_lux: rawLux       // Giá trị gốc
             }));
 
             if (historyRes.length > 0) {

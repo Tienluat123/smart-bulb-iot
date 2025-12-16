@@ -1,0 +1,97 @@
+@baseUrl = http://localhost:5001/api
+@token = {{auth_response.response.body.token}}
+@deviceId = {{auth_response.response.body.device_id}}
+
+# ============================================
+# 🔑 1. AUTHENTICATION & TOKEN (BẮT BUỘC)
+# ============================================
+
+### 1.1. Đăng nhập để lấy Token
+# @name auth_response
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "sv01",
+  "password": "123"
+}
+
+# ---------------------------------------------
+# Chú ý: Sau khi chạy request này thành công, biến @token sẽ được gán.
+# Bạn cần thay 'your_password' bằng mật khẩu admin thực tế của bạn.
+# ---------------------------------------------
+
+
+### 1.2. Lấy thông tin User và Token mới (Optional, dùng để kiểm tra)
+# GET {{baseUrl}}/auth/me
+# Authorization: Bearer {{token}}
+
+
+# ============================================
+# 💡 2. ĐIỀU KHIỂN THIẾT BỊ (Cần Token)
+# ============================================
+
+### 2.1. BẬT ĐÈN (ON)
+# Gửi lệnh BẬT đèn thủ công. Server tự dùng Token để xác định DeviceID.
+POST {{baseUrl}}/device/power
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "state": "ON"
+}
+
+
+### 2.2. TẮT ĐÈN (OFF)
+# Gửi lệnh TẮT đèn thủ công.
+POST {{baseUrl}}/device/power
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "state": "OFF"
+}
+
+
+# ============================================
+# ⏰ 3. BÁO THỨC & TIỆN ÍCH (Cần Token)
+# ============================================
+
+### 3.1. ĐẶT BÁO THỨC (Bật)
+# Đặt báo thức lúc 06:30 sáng
+POST {{baseUrl}}/device/alarm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "time": "21:08",
+  "is_active": true
+}
+
+
+### 3.2. HỦY BÁO THỨC (Tắt)
+# Gửi lại giờ, nhưng đặt is_active = false để hủy.
+POST {{baseUrl}}/device/alarm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "time": "07:00",
+  "is_active": false
+}
+
+
+# ============================================
+# 📊 4. GIÁM SÁT & DỮ LIỆU (Cần Token)
+# ============================================
+
+### 4.1. Lấy Trạng thái hiện tại
+# Kiểm tra trạng thái power, is_online, alarm_config từ DB
+GET {{baseUrl}}/device/status
+Authorization: Bearer {{token}}
+
+
+### 4.2. Lấy Lịch sử Cảm biến (Log cho Biểu đồ)
+# Trả về 10 log cảm biến mới nhất (Temp, Hum, Amp, Lux)
+GET {{baseUrl}}/device/history
+Authorization: Bearer {{token}}

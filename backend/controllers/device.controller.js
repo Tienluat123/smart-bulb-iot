@@ -2,7 +2,7 @@ const Device = require('../models/device.model');
 const User = require('../models/user.model');
 const SensorLog = require('../models/sensorlog.model');
 const { sendCommand } = require('../services/mqtt.service'); // Import hàm gửi lệnh MQTT
-
+const { updateAlarmInRAM } = require('../services/socket.service');
 /**
  * @description Điều khiển Bật/Tắt thiết bị (Tự động lấy DeviceID từ Token)
  * @route POST /api/device/control/power
@@ -153,3 +153,49 @@ exports.getSensorHistory = async (req, res) => {
     }
 };
 
+
+/**
+ * @description Cài đặt báo thức (Chỉ qua REST API - Bảo mật Token)
+ */
+exports.setAlarm = async (req, res) => {
+    try {
+        const { time, is_active } = req.body;
+        const userId = req.user.id; 
+        
+        // 1. Lấy Device ID (Giữ nguyên)
+        const user = await User.findById(userId);
+        if (!user || !user.device_id) {
+            return res.status(404).json({ message: "Chưa liên kết thiết bị." });
+        }
+        const targetDeviceId = user.device_id;
+
+        // 2. Cập nhật DB (Giữ nguyên)
+        const updatedDevice = await Device.findOneAndUpdate(
+            { device_id: targetDeviceId },
+            { 
+                'alarm_config.time': time,
+                'alarm_config.is_active': is_active
+            },
+            { new: true }
+        );
+        
+        if (!updatedDevice) {
+             return res.status(404).json({ message: "Thiết bị không tồn tại trong DB." });
+        }
+
+        // 3. Cập nhật ngay vào RAM của Socket Service (QUAN TRỌNG NHẤT)
+        // Việc này đảm bảo vòng lặp setInterval chạy trên Server sẽ bắt được giờ này.
+        updateAlarmInRAM(targetDeviceId, time, is_active);
+
+        // 4. [SỬA LỖI] KHÔNG GỬI GIỜ ALARM XUỐNG CHIP NỮA!
+        // Ta chỉ gửi lệnh Bật Còi (BUZZER) khi Server bắt được giờ!
+        // sendCommand(targetDeviceId, { alarm_time: time, alarm_active: is_active }); <--- BỎ DÒNG NÀY
+
+        // 5. Trả về kết quả
+        res.json({ message: "Đã lưu báo thức", alarm: updatedDevice.alarm_config });
+
+    } catch (error) {
+        console.error("Lỗi set alarm:", error);
+        res.status(500).json({ message: "Lỗi Server" });
+    }
+};
