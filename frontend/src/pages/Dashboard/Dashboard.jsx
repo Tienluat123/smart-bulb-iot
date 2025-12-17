@@ -53,8 +53,8 @@ const Dashboard = () => {
                         <div><span className="stat-value">{deviceData.hum}</span><span className="stat-unit">%</span></div>
                     </div>
                     <div className="stat-card">
-                        <span className="stat-title">Dòng điện</span>
-                        <div><span className="stat-value">{deviceData.amp}</span><span className="stat-unit">A</span></div>
+                        <span className="stat-title">Công suất</span>
+                        <div><span className="stat-value">{deviceData.amp}</span><span className="stat-unit">W</span></div>
                     </div>
                 </div>
 
@@ -101,13 +101,13 @@ const Dashboard = () => {
 
                          {/* 2. THANH HIỂN THỊ ĐỘ SÁNG (LUX) - PHẦN MỚI THÊM VÀO */}
                          <div style={{ width: '80%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#666', fontWeight: '500' }}>
+                            {/* <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#666', fontWeight: '500' }}>
                                 <span>Ánh sáng</span>
                                 <span>{deviceData.lux} / 1023</span>
-                            </div>
+                            </div> */}
                             
                             {/* Khung thanh bar */}
-                            <div style={{
+                            {/* <div style={{
                                 width: '100%',
                                 height: '12px',
                                 background: '#eee',
@@ -116,7 +116,7 @@ const Dashboard = () => {
                                 boxShadow: 'inset 2px 2px 5px #e0e0e0' // Đổ bóng trong nhẹ tạo chiều sâu
                             }}>
                                 {/* Thanh hiển thị giá trị */}
-                                <div style={{
+                                {/* <div style={{
                                     width: `${(deviceData.lux / 1023) * 100}%`, // Tính % độ dài
                                     height: '100%',
                                     // Gradient vàng cam (nhìn như ánh nắng)
@@ -124,8 +124,10 @@ const Dashboard = () => {
                                     borderRadius: '10px',
                                     transition: 'width 0.5s ease-out', // Hiệu ứng trượt mượt mà
                                     boxShadow: '0 0 10px rgba(253, 160, 133, 0.5)' // Phát sáng nhẹ
-                                }}></div>
-                            </div>
+                                }}></div> */}
+                            {/* </div> */} 
+                            
+
                          </div>
 
                     </div>
