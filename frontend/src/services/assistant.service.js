@@ -13,3 +13,9 @@ export const sendWeeklyReport = async () => {
     const response = await api.post('/report/weekly');
     return response;
 };
+
+// Gửi thông báo thử nghiệm qua Pushsafer
+export const sendTestPushNotification = async () => {
+    const response = await api.post('/pushsafer/weekly');
+    return response;
+};

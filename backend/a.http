@@ -102,3 +102,13 @@ Authorization: Bearer
 GET http://localhost:5001/api/device/history
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2VkNmFhM2NhMDE2MzAxZWNlMzY2OCIsImlhdCI6MTc2NTgwMTM2MywiZXhwIjoxNzY4MzkzMzYzfQ.oJxpHdvGH5XxCSffw1zITpJ2LVQxv6WGodBzUAJj3qg
+
+
+POST http://localhost:5001/api/pushsafer/test
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5M2ZlY2M5MjkyNzQ1ZjNjMTdiMTA3NiIsImlhdCI6MTc2NTkwODA3MCwiZXhwIjoxNzY4NTAwMDcwfQ.3X_RFswJjWWhR76IOglnxqYXtYj1kzqkW_EHDp84mz0
+
+{
+    "message": "Đây là tin nhắn thử nghiệm từ Smart Bulb IoT!",
+    "title": "Tin nhắn thử nghiệm"
+}

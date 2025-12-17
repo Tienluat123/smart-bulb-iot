@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import './AIChat.css'; 
 import ReactMarkdown from 'react-markdown';
-import { sendAIChat, sendWeeklyReport } from '../../services/assistant.service'; 
+import { sendAIChat, sendTestPushNotification, sendWeeklyReport } from '../../services/assistant.service'; 
 
 // Danh sách các từ/kí tự cấm (Ví dụ đơn giản)
 const FORBIDDEN_WORDS = ['chính trị', 'xâm phạm', 'bạo lực', 'nguy hiểm', 'hack', '<', '>'];
@@ -69,15 +69,20 @@ const AIChat = () => {
     const handleSendReport = async () => {
         setReportStatus('sending');
         try {
-            const response = await sendWeeklyReport();
+            
+            // Gửi đồng thời email và push
+            const [emailRes, pushRes] = await Promise.all([
+                sendWeeklyReport(),
+                sendTestPushNotification()
+            ]);
             setReportStatus('success');
             setTimeout(() => setReportStatus('idle'), 5000);
-            alert(response.data.message);
+            alert((emailRes.data?.message || 'Đã gửi email') + '\n' + (pushRes.data?.message || 'Pushsafer: Đã gửi'));
         } catch (error) {
             setReportStatus('error');
             setTimeout(() => setReportStatus('idle'), 5000);
-            alert('Lỗi gửi báo cáo. Vui lòng kiểm tra log Server.');
-            console.error('Lỗi gửi báo cáo email:', error); // Giữ lại error log quan trọng
+            alert('Lỗi gửi báo cáo hoặc Pushsafer. Vui lòng kiểm tra log Server.');
+            console.error('Lỗi gửi báo cáo/push:', error);
         }
     };
 

@@ -89,6 +89,8 @@ export const useSmartDevice = () => {
             }
             setLoading(false);
         } catch (error) {
+            console.error("Lỗi tải dữ liệu ban đầu:", error);
+            setLoading(false);
         }
     }, []);
 
@@ -101,7 +103,8 @@ export const useSmartDevice = () => {
             await toggleDevicePower(newStateString);
         } catch (error) {
             setDeviceData(prev => ({ ...prev, is_light_on: !newState }));
-            alert("Lỗi kết nối!");
+            alert("Không thể thay đổi trạng thái đèn. Vui lòng thử lại.");
+            console.error("Lỗi khi thay đổi trạng thái đèn:", error);
         }
     };
 

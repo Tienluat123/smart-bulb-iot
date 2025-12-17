@@ -11,7 +11,9 @@ const { initSocket } = require('./services/socket.service');
 const reportRoute = require('./routes/reportMail.route');
 const authRoute = require('./routes/auth.route');
 const chatRoute = require('./routes/chat.route');
+
 const deviceRoute = require('./routes/device.route')
+const reportPushsaferRoute = require('./routes/reportPushsafer.route');
 
 // Init App
 const app = express();
@@ -20,10 +22,12 @@ const io = new Server(httpServer, { cors: { origin: "*" } });
 
 app.use(cors());
 app.use(express.json());
+
 app.use('/api/report', reportRoute);
 app.use('/api/auth', authRoute);
 app.use('/api/chat', chatRoute);
 app.use('/api/device', deviceRoute);
+app.use('/api/pushsafer', reportPushsaferRoute);
 
 
 

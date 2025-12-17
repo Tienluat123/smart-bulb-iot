@@ -1,5 +1,3 @@
-dotenv.config();
-
 const Pushsafer = require('pushsafer-notifications');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -62,7 +60,7 @@ const sendReportPushsafer = async (userDeviceId, userName, stats, aiResult) => {
     await sendPushNotification({
         message,
         title,
-        device: userDeviceId
+        device: userDeviceId,
     });
 };
 
