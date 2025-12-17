@@ -137,8 +137,8 @@ int divider = 0, noteDuration = 0;
 
 /* ================= PIN ================= */
 #define RELAY_PIN    26
-#define ZC_PIN       27
-#define PWM_PIN      14
+#define ZC_PIN       27 // Nhận tín hiệu Zero Crossing (AC = 0V)
+#define PWM_PIN      14 // Xuất xung điều khiển triac
 #define DHT11_PIN    17
 #define BUZZER_PIN   19
 #define CDS_PIN      34
@@ -146,7 +146,7 @@ int divider = 0, noteDuration = 0;
 /* ================= OBJECT ================= */
 DHT dht11(DHT11_PIN, DHT11);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
-dimmerLamp acd(PWM_PIN, ZC_PIN);
+dimmerLamp acd(PWM_PIN, ZC_PIN); // Tạo object điều khiển dimmer
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -162,12 +162,12 @@ const char* mqtt_pub_topic = "smartbulb/sensor/ESP32_001";
 const char* mqtt_sub_topic = "smartbulb/control/ESP32_001";
 
 /* ================= STATE (SHARED) ================= */
-volatile int targetPower = 30;
+volatile int targetPower = 30; // Độ sáng mong muốn (0–100%)
 volatile bool systemReady = false;
 
 /* ================= CDS FILTER ================= */
 #define CDS_SAMPLES 8
-#define POWER_HYSTERESIS 2
+#define POWER_HYSTERESIS 2 // Ngưỡng chống rung: Chênh lệch < 2% → không thay đổi, Tránh dimmer giật liên tục
 
 int cdsBuf[CDS_SAMPLES];
 int cdsIndex = 0;
@@ -342,8 +342,8 @@ void setup() {
   analogSetAttenuation(ADC_11db);
 
   /* DIMMER */
-  acd.begin(NORMAL_MODE, ON);
-  acd.setPower(30);   // giữ ổn định khi boot
+  acd.begin(NORMAL_MODE, ON); // NORMAL_MODE: điều khiển pha chuẩn (phase control), ON bật dimmer ngay
+  acd.setPower(30);   // giữ ổn định khi boot, 30% công suất, Tránh đèn bật max ngay khi boot
 
   /* WIFI */
   WiFi.begin(ssid, password);
@@ -386,7 +386,7 @@ void loop() {
 
   static unsigned long lastCDSRead = 0;
   static unsigned long lastFadeUpdate = 0;
-  static int currentPower = 30;
+  static int currentPower = 30; // Độ sáng hiện tại đang áp dụng
   static int lastPower = -1;
 
   
@@ -412,11 +412,11 @@ void loop() {
     else if (currentPower > targetPower) currentPower--;
 
     if (currentPower != lastPower) {
-      acd.setPower(currentPower);
-      lastPower = currentPower;
+      acd.setPower(currentPower); // DÒNG QUYẾT ĐỊNH ĐỘ SÁNG ĐÈN, Gửi công suất mới cho dimmer
+      lastPower = currentPower; // Lưu trạng thái tránh gọi lặp
 
       /* 🔁 SHARE TO OTHER THREAD */
-      g_luxPercent = currentPower;
+      g_luxPercent = currentPower; // Chia sẻ sang task khác, Gửi MQTT, Hiển thị web
     }
   }
 }

@@ -126,6 +126,7 @@ export const useSmartDevice = () => {
                     socketRef.current.emit('join_device', deviceId);
                 }
             } catch (e) {
+                console.error("Lỗi phân tích userInfo từ localStorage:", e);
             }
         }
 
